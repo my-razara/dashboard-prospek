@@ -156,7 +156,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .st{font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;background:var(--bg);color:var(--ink-2)}
 .st.p{background:var(--step-soft);color:var(--accent-ink)}
 .st.k{background:var(--deal-soft);color:var(--ok-ink)}
-.st.x{background:var(--lost-soft);color:var(--bad-ink)}
+.st.neg{background:var(--lost-soft);color:var(--bad-ink)}
 .st.pr{background:var(--amber-soft);color:var(--warn-ink)}
 .mini{display:flex;gap:3px}
 .mini button{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);background:var(--panel);cursor:pointer;padding:0}
@@ -324,6 +324,7 @@ dialog.paydlg{width:min(460px,94vw)}
 html.is-dark .themeBtn .ic-sun{display:block}
 html:not(.is-dark) .themeBtn .ic-moon{display:block}
 .home2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+@media (max-width:1180px){.home2{grid-template-columns:1fr}}
 .home2 .card{margin:0}
 .lnk{border:0;background:none;color:var(--accent-ink);font-weight:700;font-size:13px;cursor:pointer;padding:0}
 .hflow{display:flex;flex-direction:column;gap:6px}
@@ -340,7 +341,7 @@ html:not(.is-dark) .themeBtn .ic-moon{display:block}
 .shell{display:block}
 .side{display:none}
 @media (min-width:768px){
-  .shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+  .shell{display:grid;grid-template-columns:clamp(212px,20vw,248px) minmax(0,1fr);min-height:100vh}
   .side{display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:20px 14px 16px}
   .side-brand{display:flex;align-items:center;gap:10px;padding:2px 6px 4px}
   .side-brand b{display:block;font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
@@ -365,7 +366,7 @@ html:not(.is-dark) .themeBtn .ic-moon{display:block}
   .side-user small{display:block;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .side-av{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--step-soft);color:var(--accent-ink);font-weight:800;font-size:14px;flex:none}
   .side-out{border:1px solid var(--line);background:var(--panel);color:var(--bad-ink);width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;flex:none}
-  .wrap{max-width:1180px;width:100%;padding:24px 32px 60px}
+  .wrap{max-width:1180px;width:100%;padding:24px clamp(18px,2.4vw,32px) 60px}
   .top{align-items:center;margin-bottom:16px}
   .top #h1,.top .who,.top .actions{display:none!important}
   .vtitle{display:block;margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
@@ -504,7 +505,7 @@ dialog .mb{overflow-x:hidden}
 @media (max-width:767px){
   .mobile-only{display:revert}
   .desk-only{display:none}
-  body{font-size:15px;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  body{font-size:15px;padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   .wrap{padding:0 14px 24px}
   /* app bar */
   .top{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -14px 14px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;border-bottom:1px solid var(--line);flex-wrap:nowrap;align-items:center}
@@ -1353,7 +1354,10 @@ function pagerUI(){
   if(n<=7){for(let k=0;k<n;k++)add(k)}else{add(0);if(i>3)add("…");for(let k=Math.max(1,i-1);k<=Math.min(n-2,i+1);k++)add(k);if(i<n-4)add("…");add(n-1)}
   $("#pgNums").innerHTML=nums.map(k=>k==="…"?`<span class="pg-gap">…</span>`:`<button type="button" class="pg-n ${k===i?"on":""}" data-pg="${k}" aria-label="Halaman ${k+1}" ${k===i?'aria-current="page"':""}>${k+1}</button>`).join("");
 }
-function fitPagesHeight(){const el=pagesEl();const pg=el.children[pgIdx];if(pg)el.style.height=pg.offsetHeight+"px"}
+function fitPagesHeight(){const el=pagesEl();const pg=el.children[pgIdx];if(!pg)return;
+  // saat halaman Klien tersembunyi tinggi tidak bisa diukur: biarkan otomatis, hitung lagi saat dibuka
+  if(!el.offsetParent||!pg.offsetHeight){el.style.height="";return}
+  el.style.height=pg.offsetHeight+"px";const x=pgIdx*el.clientWidth;if(Math.abs(el.scrollLeft-x)>2)el.scrollLeft=x}
 function goPage(i,smooth){
   pgIdx=Math.max(0,Math.min(pgCount-1,i));
   ["#pagesD","#pagesM"].forEach(id=>{const el=$(id),x=pgIdx*el.clientWidth;if(el.scrollTo)el.scrollTo({left:x,behavior:smooth?"smooth":"auto"});else el.scrollLeft=x});
@@ -1455,7 +1459,7 @@ function render(){
     .concat(work?[["step","Progres pengerjaan"],["vo","VO partner / kab-kota"],["priceDeal","Price deal"],["sisa","Sisa tagihan"],["fu","Follow-up"]]
                 :[["","Status"],["priceDeal","Price deal"],["sisa","Sisa"],["fu","Follow-up"],["created","Masuk"]]).concat([["",""]]);
   const theadHTML="<tr>"+cols.map(([k,l])=>`<th ${k?`data-s="${k}"`:""}>${l}${k&&k===sortKey?(sortDir>0?" ↑":" ↓"):""}</th>`).join("")+"</tr>";
-  const tagHtml=p=>`<div class="stags">${ALL.filter(t=>has(p,t)).map(t=>WEEKS.includes(t)?`<span class="st wk">${esc(t)} · ${esc(ymShort(bulanOf(p)))}</span>`:`<span class="st ${PROC.includes(t)?"p":t==="Klien"?"k":["Lose","Spam","Delete"].includes(t)?"x":t==="Kasih Promo"?"pr":""}">${esc(t)}</span>`).join("")||`<span class="co">belum ada</span>`}</div>`;
+  const tagHtml=p=>`<div class="stags">${ALL.filter(t=>has(p,t)).map(t=>WEEKS.includes(t)?`<span class="st wk">${esc(t)} · ${esc(ymShort(bulanOf(p)))}</span>`:`<span class="st ${PROC.includes(t)?"p":t==="Klien"?"k":["Lose","Spam","Delete"].includes(t)?"neg":t==="Kasih Promo"?"pr":""}">${esc(t)}</span>`).join("")||`<span class="co">belum ada</span>`}</div>`;
   const mini=p=>{const c=curStep(p);return `<div class="mini">${PROC.map((s,i)=>`<button type="button" class="${has(p,s)?"on":""} ${i===PROC.length-1?"fin":""}" data-tog="${p.id}" data-tag="${esc(s)}" title="${esc(s)}" aria-label="${esc(s)} ${has(p,s)?"(selesai)":"(belum)"}" aria-pressed="${has(p,s)}"></button>`).join("")}</div><div class="mini-l">${c>=0?esc(PROC[c]):"Prospek"}${c<PROC.length-1?` <span class="co">→ ${esc(PROC[c+1])}</span>`:""}</div>`};
   const fuCell=p=>`<div class="fucell">${fuChip(p,true)}</div>`;
   const sisaCell=p=>{if(!N(p.priceDeal))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
@@ -1499,6 +1503,7 @@ $("#pgNums").addEventListener("click",e=>{const b=e.target.closest("[data-pg]");
 $("#pgSize").addEventListener("change",()=>{ls.set("pm_pgsize",$("#pgSize").value);render()});
 (()=>{const v=ls.get("pm_pgsize","10");if(["10","20","50","100"].includes(String(v)))$("#pgSize").value=String(v)})();
 window.addEventListener("resize",()=>goPage(pgIdx,false));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{fitPagesHeight()}catch(e){}});
 $("#resetF").onclick=()=>{$("#q").value="";["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].forEach(s=>$(s).value="");stepFilter=null;labelFilter="";render()};
 $("#clearStep").onclick=()=>{stepFilter=null;render()};
 let busy=new Set();
@@ -1918,7 +1923,7 @@ let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("sh
 // ---------- mobile ----------
 const isMobile=()=>window.matchMedia?window.matchMedia("(max-width:767px)").matches:false;
 const VIEW_T={tugas:"Tugas hari ini",home:"Ringkasan",alur:"Alur pengerjaan",list:"Klien",fu:"Follow-up",sebaran:"Sebaran"};
-function setView(v){if(!VIEW_T[v])v="home";document.body.dataset.view=v;$("#vTitle").textContent=VIEW_T[v];document.querySelectorAll(".bnav [data-view],.side [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
+function setView(v){if(!VIEW_T[v])v="home";setTimeout(()=>{try{fitPagesHeight()}catch(e){}},30);document.body.dataset.view=v;$("#vTitle").textContent=VIEW_T[v];document.querySelectorAll(".bnav [data-view],.side [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
 setView(ls.get("pm_view","tugas"));
 $("#fab").onclick=()=>openForm();
 function updFilterCount(){const n=["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].filter(x=>$(x).value).length;$("#fCount").textContent=n||""}
