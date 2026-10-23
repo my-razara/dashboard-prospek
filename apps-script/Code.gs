@@ -87,7 +87,18 @@ function json_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// Tanda tata letak kolom saat ini. Kalau berbeda dengan yang tersimpan, sheet disusun ulang dulu
+// sebelum aksi apa pun (termasuk simpan), supaya data tidak pernah ditulis ke kolom yang salah.
+const LAYOUT_SIG = FIELDS.map(f => f[0]).join(',');
+function ensureLayout_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('LAYOUT_SIG') === LAYOUT_SIG) return;
+  ensure_(ss_());
+  props.setProperty('LAYOUT_SIG', LAYOUT_SIG);
+}
+
 function route_(q) {
+  if (q.action !== 'version' && q.action !== 'logout') ensureLayout_();
   switch (q.action) {
     case 'names': { const ss = ss_(); ensure_(ss); return readUsers_(ss).filter(u => u.pin).map(u => u.name); }
     case 'login': ensure_(ss_()); return login(q.name, q.pin);
@@ -453,9 +464,14 @@ function migrate_(ss, sh) {
   const keyOf = h => (oldIsLegacy && FIELD_ALIAS[h]) || byLabel[h] || '';
   const extra = head.map((h, i) => ({ h, i })).filter(x => x.h && !keyOf(x.h));
   const tz = ss.getSpreadsheetTimeZone();
+  const isId = v => /^p[a-z0-9]{8,}$/.test(String(v || ''));
+  const oldIdIdx = head.indexOf('ID');
   const rows = vals.slice(1).filter(r => r.some(v => v !== '' && v != null)).map((r, n) => {
     const o = {};
-    head.forEach((h, i) => { const k = keyOf(h); if (k && o[k] === undefined) o[k] = r[i]; });
+    // baris yang sudah terlanjur ditulis dengan urutan baru (ID ada di posisi kolom ID baru) dibaca apa adanya
+    const already = oldIdIdx !== ID_COL - 1 && isId(r[ID_COL - 1]) && !isId(r[oldIdIdx]);
+    if (already) FIELDS.forEach((f, i) => { o[f[0]] = r[i]; });
+    else head.forEach((h, i) => { const k = keyOf(h); if (k && o[k] === undefined) o[k] = r[i]; });
     Object.keys(o).forEach(k => { if (o[k] instanceof Date) o[k] = Utilities.formatDate(o[k], tz, k === 'updated' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'); });
     if (!o.no) o.no = n + 1;
     const m = monthOf_(o.created);

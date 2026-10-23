@@ -1166,11 +1166,15 @@ async function sync(){
       const batch=queue.slice();
       const r=await call("batch",{ops:batch.map(o=>({op:o.op,id:o.id,rec:o.rec}))});
       let bad=[];
+      let keep=0;
       r.results.forEach((res,i)=>{const o=batch[i];
-        queue=queue.filter(q=>!(q.id===o.id&&q.seq===o.seq));
-        if(res.ok){serverItems=serverItems.filter(x=>x.id!==o.id);if(o.op==="save")serverItems.push(Object.assign({},o.rec,res.invNo?{invNo:res.invNo}:{},Array.isArray(res.statuses)?{statuses:res.statuses}:{}))}else bad.push(res.error)});
+        // gagal karena masalah server (bukan karena ditolak) -> tetap di antrean & dicoba lagi, data tidak hilang
+        const fatal=res.ok||res.error==="FORBIDDEN"||res.error==="Data tidak valid";
+        if(fatal)queue=queue.filter(q=>!(q.id===o.id&&q.seq===o.seq));else keep++;
+        if(res.ok){serverItems=serverItems.filter(x=>x.id!==o.id);if(o.op==="save")serverItems.push(Object.assign({},o.rec,res.invNo?{invNo:res.invNo}:{},Array.isArray(res.statuses)?{statuses:res.statuses}:{}))}else if(fatal)bad.push(res.error)});
       if(r.prev===localVer)localVer=r.ver;
       if(bad.length)toast(bad.includes("FORBIDDEN")?"Ada data yang bukan milik PIC kamu, perubahannya dibatalkan.":"Sebagian perubahan ditolak server dan dibatalkan.");
+      if(keep){items=applyQueue(serverItems);saveLocal();render();throw Object.assign(new Error("SERVER"),{code:"SERVER"})}
       items=applyQueue(serverItems);saveLocal();render();
     }
     const v=await call("version");
