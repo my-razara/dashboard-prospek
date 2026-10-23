@@ -293,6 +293,7 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 }
 .mobile-only{display:none}
 /* ---- tampilan per menu ---- */
+body:not([data-view="tugas"]) [data-mv="tugas"],
 body:not([data-view="home"]) [data-mv="home"],
 body:not([data-view="alur"]) [data-mv="alur"],
 body:not([data-view="list"]) [data-mv="list"],
@@ -301,6 +302,24 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .grid2{display:block}
 .grid2>.card{margin-bottom:16px}
 .vtitle{display:none}
+#frm.quick .qh{display:none!important}
+.qbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--step-soft)}
+.qbar .hint{color:var(--accent-ink);font-weight:600}
+#qNote[hidden]+#qToggle{margin-left:auto}
+.tugas .card{margin-bottom:16px}
+.tg-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.tgs{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
+.tgs b{font-size:26px;font-weight:800;line-height:1.1}
+.tgs span{font-size:13px;color:var(--ink-2);font-weight:600}
+.tgs.ib b{color:var(--accent-ink)}.tgs.due b{color:var(--warn-ink)}.tgs.wdp b{color:var(--ok-ink)}.tgs.bad b{color:var(--bad-ink)}
+.tgs.zero b{color:var(--ink-3)}
+.tugas .fu-mid small{font-size:12px;color:var(--ink-2)}
+.inv-btn.pay{background:var(--btn);color:#fff;border-color:var(--btn)}
+.mc .r3 .acts:has(.pay){grid-template-columns:1fr 1fr 1fr}
+dialog.paydlg{width:min(460px,94vw)}
+@media (max-width:767px){.tg-sum{grid-template-columns:repeat(2,1fr);gap:10px}.tgs b{font-size:22px}
+  dialog.paydlg.paydlg{width:100vw;max-width:100vw;height:auto;max-height:90dvh;margin:auto 0 0;border-radius:18px 18px 0 0}
+  dialog.paydlg.paydlg form{height:auto}}
 .themeBtn .ic-sun,.themeBtn .ic-moon{display:none}
 html.is-dark .themeBtn .ic-sun{display:block}
 html:not(.is-dark) .themeBtn .ic-moon{display:block}
@@ -598,10 +617,11 @@ dialog .mb{overflow-x:hidden}
   <button class="btn primary side-add" type="button" data-proxy="#addBtn">+ Tambah prospek</button>
   <nav class="side-nav">
     <div class="side-h">Menu</div>
+    <button type="button" class="snav" data-view="tugas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tugas hari ini</span><i class="sbadge" id="tgBadgeS"></i></button>
     <button type="button" class="snav" data-view="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Ringkasan</span></button>
     <button type="button" class="snav" data-view="alur"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4M11.5 12c2 0 2-6 5-6M11.5 12c2 0 2 6 5 6"/></svg><span>Alur pengerjaan</span><i class="snum" id="nAlur"></i></button>
     <button type="button" class="snav" data-view="list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Klien</span><i class="snum" id="nList"></i></button>
-    <button type="button" class="snav" data-view="fu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="sbadge" id="fuBadgeS"></i></button>
+    <button type="button" class="snav" data-view="fu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="sbadge" id="fuBadgeS"></i><i id="fuBadge" hidden></i></button>
     <button type="button" class="snav" data-view="sebaran"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sebaran</span></button>
   </nav>
   <div class="side-foot">
@@ -659,6 +679,13 @@ dialog .mb{overflow-x:hidden}
     <div class="labels" id="labels"></div>
   </section>
 
+  <section data-mv="tugas" class="tugas">
+    <div class="tg-sum" id="tgSum"></div>
+    <div class="card"><h3>Inbox follow-up <small id="tgIbN"></small></h3><ul class="fu" id="tgIb"></ul></div>
+    <div class="card"><h3>Follow-up jatuh tempo <span><small id="tgFuN"></small> <button type="button" class="lnk" data-go="fu">Semua follow-up →</button></span></h3><ul class="fu" id="tgFu"></ul></div>
+    <div class="card"><h3>Waiting DP, belum bayar <small id="tgDpN"></small></h3><ul class="fu" id="tgDp"></ul></div>
+    <div class="card"><h3>Tagihan lewat jatuh tempo <small id="tgDueN"></small></h3><ul class="fu" id="tgDue"></ul></div>
+  </section>
   <section class="kpis" id="kpis" data-mv="home"></section>
   <section class="kpis fin" id="fin" data-mv="home"></section>
   <section class="home2" data-mv="home">
@@ -717,10 +744,10 @@ dialog .mb{overflow-x:hidden}
 
 <button class="fab mobile-only" id="fab" type="button" aria-label="Tambah prospek"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 <nav class="bnav mobile-only" aria-label="Navigasi">
+  <button type="button" data-view="tugas"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tugas</span><i class="nbadge" id="tgBadge"></i></button>
   <button type="button" data-view="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Ringkasan</span></button>
   <button type="button" data-view="alur"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4M11.5 12c2 0 2-6 5-6M11.5 12c2 0 2 6 5 6"/></svg><span>Alur</span></button>
   <button type="button" data-view="list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Klien</span></button>
-  <button type="button" data-view="fu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="nbadge" id="fuBadge"></i></button>
   <button type="button" data-view="sebaran"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sebaran</span></button>
 </nav>
 <dialog id="moreDlg" class="sheet" aria-label="Menu">
@@ -740,31 +767,32 @@ dialog .mb{overflow-x:hidden}
   <form id="frm" novalidate>
     <div class="mh"><h2 id="dlgTitle">Tambah prospek</h2><span class="mh-act"><button class="btn sm" type="button" id="invFromForm">Lihat invoice</button><button class="x" type="button" data-close aria-label="Tutup">×</button></span></div>
     <div class="mb">
+      <div class="qbar"><span class="hint" id="qNote">Mode cepat: cukup isi data utama. Detail invoice & keuangan bisa dilengkapi nanti.</span><button class="btn sm" type="button" id="qToggle">Isi lengkap</button></div>
       <p class="req-note">Kolom bertanda <span class="rq">*</span> wajib diisi. Kolom lainnya boleh dikosongkan.</p>
       <div class="sec"><h4>Data prospek</h4>
         <div class="form">
           <label><span class="lt">Nama kontak <span class="rq" aria-hidden="true">*</span></span><input name="nama" autocomplete="off" aria-required="true"></label>
-          <label>Perusahaan / calon PT<input name="perusahaan" autocomplete="off"></label>
+          <label class="qh">Perusahaan / calon PT<input name="perusahaan" autocomplete="off"></label>
           <label>No. WhatsApp<input name="wa" inputmode="tel" placeholder="0812…" autocomplete="off"><span class="hint dup-hint" id="dupHint"></span></label>
           <label><span class="lt">Sumber iklan <span class="rq" aria-hidden="true">*</span></span><select name="sumber" aria-required="true"></select><span class="hint" id="brandHint"></span></label>
           <label><span class="lt">PIC <span class="rq" aria-hidden="true">*</span></span><select name="pic" aria-required="true"></select></label>
           <label><span class="lt">Tanggal masuk <span class="rq" aria-hidden="true">*</span></span><input name="created" type="date" aria-required="true"></label>
           <div hidden><select name="bulan"></select><select name="minggu"></select></div>
-          <label>Minggu<input id="autoWeek" readonly tabindex="-1"><span class="hint">Otomatis dari tanggal masuk</span></label>
+          <label class="qh">Minggu<input id="autoWeek" readonly tabindex="-1"><span class="hint">Otomatis dari tanggal masuk</span></label>
           <div class="two" style="display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink-2)"><span class="lt">Layanan <span class="rq" aria-hidden="true">*</span></span>
             <div class="kat" id="katSeg" role="group" aria-label="Kategori layanan"><button type="button" data-kat="Pendirian">Pendirian</button><button type="button" data-kat="Perubahan">Perubahan</button><button type="button" data-kat="Lainnya">Layanan lain</button></div>
             <select name="layanan" aria-label="Layanan"></select></div>
           <label id="paketWrap"><span class="lt">Paket <span class="rq" id="paketRq" aria-hidden="true">*</span></span><select name="paket"></select><input name="paketManual" placeholder="Ketik paket" autocomplete="off"></label>
-          <div class="stack">
+          <div class="stack qh">
             <label>VO partner<input name="vo" list="voList" placeholder="Lokasi VO" autocomplete="off"><datalist id="voList"></datalist></label>
             <label>Kab/kota<input name="kota" list="kotaList" placeholder="Kabupaten / kota" autocomplete="off"><datalist id="kotaList"></datalist></label>
           </div>
-          <label>Estimasi nilai (Rp)<input name="nilai" class="money" inputmode="numeric" placeholder="0"></label>
+          <label class="qh">Estimasi nilai (Rp)<input name="nilai" class="money" inputmode="numeric" placeholder="0"></label>
 
         </div>
       </div>
-      <div class="sec"><h4>Status <span class="hint">(boleh pilih lebih dari satu)</span></h4><div id="statusChips"></div></div>
-      <div class="sec"><h4>Invoice</h4>
+      <div class="sec qh"><h4>Status <span class="hint">(boleh pilih lebih dari satu)</span></h4><div id="statusChips"></div></div>
+      <div class="sec qh"><h4>Invoice</h4>
         <div class="form">
           <label><span class="lt">Brand invoice <span class="rq" aria-hidden="true">*</span></span><select name="invBrand" aria-required="true"></select></label>
           <label>No. invoice<input name="invNo" placeholder="Otomatis saat tersinkron" autocomplete="off"></label>
@@ -780,7 +808,7 @@ dialog .mb{overflow-x:hidden}
             <button class="btn sm" type="button" id="addItem">+ Tambah item</button></div>
         </div>
       </div>
-      <div class="sec"><h4>Keuangan</h4>
+      <div class="sec qh"><h4>Keuangan</h4>
         <div class="form">
           <label>Price deal (Rp)<input name="priceDeal" class="money" inputmode="numeric" placeholder="0"><span class="hint" id="pdHint"></span></label>
           <label>Diskon (Rp)<input name="diskon" class="money" inputmode="numeric" placeholder="0"></label>
@@ -795,7 +823,7 @@ dialog .mb{overflow-x:hidden}
           <label class="full">Keterangan<textarea name="keterangan" placeholder="Keterangan pembayaran, rekening tujuan, dll."></textarea></label>
         </div>
       </div>
-      <div class="sec"><h4>Catatan prospek</h4>
+      <div class="sec qh"><h4>Catatan prospek</h4>
         <div class="form"><label class="full"><textarea name="catatan" placeholder="Kebutuhan klien, hasil chat terakhir, keberatan harga…" aria-label="Catatan"></textarea></label></div>
       </div>
       <div class="err" id="err"></div>
@@ -868,6 +896,19 @@ dialog .mb{overflow-x:hidden}
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
 </dialog>
 <div id="printArea" aria-hidden="true"></div>
+<dialog id="payDlg" class="paydlg" aria-labelledby="payTitle">
+  <form id="payFrm" novalidate>
+    <div class="mh"><h2 id="payTitle">DP masuk</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+    <div class="mb"><div class="form" style="grid-template-columns:1fr 1fr">
+      <label class="full">Price deal (Rp)<input name="pd" class="money" inputmode="numeric" placeholder="0"></label>
+      <label><span id="payLbl">Nominal DP (Rp)</span><input name="nom" class="money" inputmode="numeric" placeholder="0"></label>
+      <label>Tanggal<input name="tgl" type="date"></label>
+      <p class="hint full" id="payInfo" style="margin:0"></p>
+      <div class="err full" id="payErr"></div>
+    </div></div>
+    <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn primary" type="submit">Simpan</button></div></div>
+  </form>
+</dialog>
 <div class="login" id="login" hidden>
   <form id="loginFrm" novalidate>
     <h2>Masuk dashboard</h2>
@@ -1103,6 +1144,7 @@ function loadData(d){
 }
 function applyRole(){
   const a=isAdmin();
+  if(!ls.get("pm_view",null))setView(a?"home":"tugas");
   $("#setBtn").style.display=a?"":"none";
   $("#sheetBtn").style.display=a&&user.sheetUrl?"":"none";if(a&&user.sheetUrl)$("#sheetBtn").href=user.sheetUrl;
   $("#fPic").style.display=a?"":"none";if(!a)$("#fPic").value="";
@@ -1376,6 +1418,21 @@ function render(){
     +(due.length?`<li class="fu-sec">Perlu di-follow-up</li>`+due.map(p=>{const s=fuState(p);const d=dd(s.date);
       return `<li>${who(p)}<div class="fu-mid"><span class="fuc due">${esc(s.label)} · Belum</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}${s.missed.length?`<small class="fum">${esc(s.missed.join(", "))} terlewat</small>`:""}${s.choice==="promo"?`<small class="fup">${esc(promoText())}</small>`:""}</div><span class="fu-act">${wa(p)}<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button></span></li>`}).join(""):"")
     ||`<li class="empty">${items.length?"Tidak ada follow-up hari ini. Mantap!":"Belum ada data. Tambahkan data pertama dari tombol di atas."}</li>`;
+  // ---- tugas hari ini ----
+  const actv=B.filter(p=>["prospek","proses"].includes(phase(p)));
+  const dpWait=actv.filter(p=>curStep(p)===0&&!hasDp(p)).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
+  const overdue=actv.filter(p=>N(p.priceDeal)&&money(p).sisa>0&&p.invDue&&p.invDue<TODAY).sort((a,b)=>a.invDue.localeCompare(b.invDue));
+  const waB=(p,k,l)=>{const w=k?waFuLink(p,k):waLink(p.wa);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener">${l||"WA"}</a>`:""};
+  const li=(p,mid,acts)=>`<li><div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${p.paket?" "+esc(p.paket):""}${isAdmin()?" · "+esc(p.pic||""):""}</span></div><div class="fu-mid">${mid}</div><span class="fu-act">${acts}</span></li>`;
+  const none=t=>`<li class="empty">${t}</li>`;
+  $("#tgIb").innerHTML=ib.length?ib.map(p=>`<li>${who(p)}<div class="fu-choice"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div></li>`).join(""):none("Tidak ada yang perlu dipilih.");
+  $("#tgFu").innerHTML=due.length?due.map(p=>{const s=fuState(p),d=dd(s.date);return li(p,`<span class="fuc due">${esc(s.label)}</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}`,waB(p,s.label,"WA "+esc(s.label))+`<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button>`)}).join(""):none("Semua follow-up hari ini beres. Mantap!");
+  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${N(p.priceDeal)?`<small>Deal ${rpS(p.priceDeal)}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p)+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
+  $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p)+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
+  [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
+  const tgN=ib.length+due.length+dpWait.length+overdue.length;
+  $("#tgBadge").textContent=$("#tgBadgeS").textContent=tgN?(tgN>99?"99+":tgN):"";
+  $("#tgSum").innerHTML=[["Inbox",ib.length,"ib"],["Follow-up",due.length,"due"],["Waiting DP",dpWait.length,"wdp"],["Tagihan telat",overdue.length,"bad"]].map(([l,n,c])=>`<div class="tgs ${c}${n?"":" zero"}"><b class="num">${n}</b><span>${l}</span></div>`).join("");
 
   // sebaran
   const g={};B.forEach(p=>{const k=groupBy==="brand"?brandOf(p):(p[groupBy]||"–");g[k]=g[k]||{n:0,c:0,l:0};g[k].n++;if(isClient(p))g[k].c++;if(phase(p)==="lose")g[k].l++});
@@ -1404,7 +1461,7 @@ function render(){
   const sisaCell=p=>{if(!N(p.priceDeal))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
-  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">WA</a>`:""}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
+  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
   const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
     (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
          :`<td>${tagHtml(p)}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td><td class="num">${fmtD(p.created)}<div class="co">${esc(mingguOf(p))} · ${esc(ymShort(bulanOf(p)))}</div></td>`)+
@@ -1415,7 +1472,7 @@ function render(){
       <div class="amt num">${N(p.priceDeal)?`<b>${rpS(p.priceDeal)}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
     <div class="meta"><span class="pill">${esc(p.sumber||"–")} · ${esc(brandOf(p))}</span>${isAdmin()?`<span class="pill">${esc(p.pic||"–")}</span>`:""}${p.vo?`<span class="pill">VO ${esc(p.vo)}</span>`:""}${p.kota?`<span class="pill">${esc(p.kota)}</span>`:""}</div>
     ${isClient(p)?mini(p):tagHtml(p)}
-    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts"><button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener">WhatsApp</a>`:""}</span></div></div>`};
+    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener">WhatsApp</a>`:""}</span></div></div>`};
   const emptyCard=`<div class="empty">${items.length?"Tidak ada data yang cocok dengan filter ini.":"Belum ada data. Ketuk + untuk menambah prospek."}</div>`;
   // ---- halaman (10/20/50/100 per halaman), bisa digeser ke samping ----
   const per=+$("#pgSize").value||10;
@@ -1453,10 +1510,11 @@ document.addEventListener("click",async e=>{
   const vw=e.target.closest(".bnav [data-view],.side [data-view]");if(vw){setView(vw.dataset.view);return}
   const fb=e.target.closest("[data-fu]");if(fb){markFu(fb.dataset.fu);return}
   const fc=e.target.closest("[data-fuch]");if(fc){chooseFu(fc.dataset.id,fc.dataset.fuch);return}
+  const pb=e.target.closest("[data-pay]");if(pb){openPay(pb.dataset.id,pb.dataset.pay);return}
   const iv=e.target.closest("[data-inv]");if(iv){openInvoice(iv.dataset.inv);return}
   const px=e.target.closest("[data-proxy]");if(px){if($("#moreDlg").open)$("#moreDlg").close();const t=$(px.dataset.proxy);if(t)t.click();return}
   const tb=e.target.closest("[data-tab]");if(tb){tab=tb.dataset.tab;render();return}
-  const ed=e.target.closest("[data-edit]");if(ed&&!e.target.closest("[data-tog]")){openForm(ed.dataset.edit);return}
+  const ed=e.target.closest("[data-edit]");if(ed&&!e.target.closest("[data-tog]")&&!e.target.closest("[data-pay]")){openForm(ed.dataset.edit);return}
   const gs=e.target.closest("#groupSeg button");if(gs){groupBy=gs.dataset.g;document.querySelectorAll("#groupSeg button").forEach(b=>b.classList.toggle("on",b===gs));render();return}
   const th=e.target.closest("th[data-s]");if(th){const k=th.dataset.s;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=["priceDeal","sisa","step","created"].includes(k)?-1:1}render();return}
   const cl=e.target.closest("[data-close]");if(cl){cl.closest("dialog").close();return}
@@ -1505,6 +1563,7 @@ function openForm(id){
   editingId=id||null;$("#err").textContent="";applySettings();
   const p=id?items.find(x=>x.id===id):null;
   $("#dlgTitle").textContent=p?"Ubah data":"Tambah prospek";
+  $("#qToggle").hidden=!!p;setQuick(quickMode);
   $("#delBtn").style.visibility=p?"visible":"hidden";
   const d=p||{created:TODAY,sumber:$("#fSumber").value,pic:isAdmin()?$("#fPic").value:user.name,layanan:$("#fLayanan").value,statuses:["Prospek Baru"]};
   ["nama","perusahaan","wa","sumber","pic","vo","kota","created","tglDp","tglLunas","keterangan","catatan"].forEach(k=>F[k].value=d[k]||"");
@@ -1823,12 +1882,44 @@ function setTheme(t){document.documentElement.setAttribute("data-theme",t);ls.se
 document.addEventListener("click",e=>{if(e.target.closest(".themeBtn")){setTheme(isDark()?"light":"dark");if($("#moreDlg").open)$("#moreDlg").close()}});
 if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener("change",themeUI);
 themeUI();
+// ---------- aksi cepat: DP masuk / pelunasan ----------
+function payKind(p){const ph=phase(p);if(!["prospek","proses"].includes(ph))return "";if(!hasDp(p))return curStep(p)<=0?"dp":"";return N(p.priceDeal)&&money(p).sisa>0?"lunas":""}
+function payBtn(p,cls){const k=payKind(p);return k?`<button class="${cls}" type="button" data-pay="${k}" data-id="${p.id}">${k==="dp"?"DP masuk":"Pelunasan"}</button>`:""}
+let payId=null,payMode="dp";
+function openPay(id,mode){
+  const p=items.find(x=>x.id===id);if(!p)return;payId=id;payMode=mode;
+  const f=$("#payFrm").elements,m=money(p);
+  $("#payTitle").textContent=(mode==="dp"?"DP masuk · ":"Pelunasan · ")+p.nama;
+  f.pd.value=N(p.priceDeal)?N(p.priceDeal).toLocaleString("id-ID"):"";f.pd.closest("label").style.display=N(p.priceDeal)?"none":"";
+  const nominal=mode==="dp"?(N(p.priceDeal)?Math.round(N(p.priceDeal)/2):0):Math.max(0,m.sisa);
+  f.nom.value=nominal?nominal.toLocaleString("id-ID"):"";f.tgl.value=TODAY;$("#payErr").textContent="";
+  $("#payLbl").textContent=mode==="dp"?"Nominal DP (Rp)":"Nominal pelunasan (Rp)";
+  $("#payInfo").textContent=mode==="dp"?(N(p.priceDeal)?"Default 50% dari price deal. Ubah kalau beda.":"Isi price deal dulu supaya invoice & sisa tagihan terhitung."):"Default sisa tagihan "+rp(m.sisa)+".";
+  $("#payDlg").showModal();f.nom.focus();
+}
+$("#payFrm").querySelectorAll(".money").forEach(i=>i.addEventListener("input",()=>{const n=i.value.replace(/\D/g,"");i.value=n?Number(n).toLocaleString("id-ID"):""}));
+$("#payFrm").addEventListener("submit",async e=>{
+  e.preventDefault();const p=items.find(x=>x.id===payId);if(!p)return;const f=e.target.elements;
+  const nom=N(f.nom.value.replace(/\D/g,"")),pd=N(p.priceDeal)||N(f.pd.value.replace(/\D/g,""));
+  if(!nom){$("#payErr").textContent="Isi nominalnya dulu.";return}
+  const np=Object.assign({},p,{updated:TODAY});delete np.status;if(!N(p.priceDeal)&&pd)np.priceDeal=pd;
+  let st=tags(p).slice();
+  if(payMode==="dp"){np.dp=nom;np.tglDp=f.tgl.value||TODAY;if(!st.some(x=>PROC.includes(x)))st.push("Waiting DP")}
+  else{np.lunas=N(p.lunas)+nom;np.tglLunas=f.tgl.value||TODAY;if(money(np).sisa<=0&&!st.includes("Lunas"))st.push("Lunas")}
+  np.statuses=st;$("#payDlg").close();await persist(np);
+  toast(payMode==="dp"?`${p.nama}: DP ${rp(nom)} dicatat`:money(np).sisa<=0?`${p.nama}: lunas ✓`:`${p.nama}: pembayaran ${rp(nom)} dicatat`);
+  if(payMode==="dp")openInvoice(p.id);
+});
+// ---------- input cepat ----------
+let quickMode=ls.get("pm_quick",true);
+function setQuick(q){quickMode=q;$("#frm").classList.toggle("quick",q&&!editingId);$("#qToggle").textContent=q?"Isi lengkap":"Mode cepat";$("#qNote").hidden=!(q&&!editingId);ls.set("pm_quick",q)}
+$("#qToggle").onclick=()=>setQuick(!quickMode);
 let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2200)}
 // ---------- mobile ----------
 const isMobile=()=>window.matchMedia?window.matchMedia("(max-width:767px)").matches:false;
-const VIEW_T={home:"Ringkasan",alur:"Alur pengerjaan",list:"Klien",fu:"Follow-up",sebaran:"Sebaran"};
+const VIEW_T={tugas:"Tugas hari ini",home:"Ringkasan",alur:"Alur pengerjaan",list:"Klien",fu:"Follow-up",sebaran:"Sebaran"};
 function setView(v){if(!VIEW_T[v])v="home";document.body.dataset.view=v;$("#vTitle").textContent=VIEW_T[v];document.querySelectorAll(".bnav [data-view],.side [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
-setView(ls.get("pm_view","list"));
+setView(ls.get("pm_view","tugas"));
 $("#fab").onclick=()=>openForm();
 function updFilterCount(){const n=["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].filter(x=>$(x).value).length;$("#fCount").textContent=n||""}
 const openF=o=>document.body.classList.toggle("fopen",o);
