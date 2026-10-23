@@ -105,7 +105,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
 .card h3{margin:0 0 12px;font-size:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .card h3 small{font-weight:500;color:var(--ink-3);font-size:13px}
-.fu{list-style:none;margin:0;padding:0;max-height:330px;overflow:auto}
+.fu{list-style:none;margin:0;padding:0}
 .fu li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding:12px 0;border-top:1px solid var(--line)}
 .fu li .who{grid-column:1/-1}
 .fu li.fu-sec,.fu li.empty{display:block}
@@ -291,6 +291,64 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
   .filters select{flex:1 1 45%}
 }
 .mobile-only{display:none}
+/* ---- tampilan per menu ---- */
+body:not([data-view="home"]) [data-mv="home"],
+body:not([data-view="alur"]) [data-mv="alur"],
+body:not([data-view="list"]) [data-mv="list"],
+body:not([data-view="fu"]) [data-mv="fu"],
+body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
+.grid2{display:block}
+.grid2>.card{margin-bottom:16px}
+.vtitle{display:none}
+.home2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+.home2 .card{margin:0}
+.lnk{border:0;background:none;color:var(--accent-ink);font-weight:700;font-size:13px;cursor:pointer;padding:0}
+.hflow{display:flex;flex-direction:column;gap:6px}
+.hf{display:grid;grid-template-columns:120px 1fr 32px;align-items:center;gap:10px;border:0;background:none;padding:5px 4px;border-radius:8px;cursor:pointer;color:var(--ink-2);font-size:13px;text-align:left}
+.hf:hover{background:var(--panel-2)}
+.hf-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.hf-t{height:8px;border-radius:4px;background:var(--bg);overflow:hidden}
+.hf-t i{display:block;height:100%;background:var(--step);border-radius:4px;min-width:2px}
+.hf b{text-align:right;color:var(--ink)}
+#homeFu li{grid-template-columns:minmax(0,1fr) auto}
+#homeFu li .who{grid-column:auto}
+@media (max-width:767px){.home2{grid-template-columns:1fr;gap:12px}.hf{grid-template-columns:110px 1fr 28px}}
+/* ---- sidebar (laptop) ---- */
+.shell{display:block}
+.side{display:none}
+@media (min-width:768px){
+  .shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+  .side{display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:20px 14px 16px}
+  .side-brand{display:flex;align-items:center;gap:10px;padding:2px 6px 4px}
+  .side-brand b{display:block;font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+  .side-brand small{display:block;font-size:12px;color:var(--ink-3)}
+  .side-logo{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:var(--btn);color:#fff;flex:none}
+  .side-add{width:100%;padding:11px 14px}
+  .side-nav{display:flex;flex-direction:column;gap:2px}
+  .side-h{font-size:11.5px;font-weight:700;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;padding:6px 10px 4px}
+  .snav{display:flex;align-items:center;gap:11px;width:100%;border:0;background:none;padding:10px 10px;border-radius:10px;font-size:14.5px;font-weight:600;color:var(--ink-2);cursor:pointer;text-align:left;text-decoration:none}
+  .snav span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .snav:hover{background:var(--panel-2);color:var(--ink)}
+  .snav.on{background:var(--step-soft);color:var(--accent-ink)}
+  .snav.on svg{stroke-width:2.3}
+  .snum:not(:empty),.sbadge:not(:empty){font-style:normal;font-size:12px;font-weight:700;min-width:22px;height:20px;padding:0 7px;border-radius:10px;display:inline-grid;place-items:center}
+  .snum:not(:empty){background:var(--bg);color:var(--ink-2);border:1px solid var(--line)}
+  .sbadge:not(:empty){background:var(--lost);color:#fff}
+  .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding-top:10px}
+  .snav.sx{font-size:13.5px;padding:8px 10px}
+  .side-user{display:flex;align-items:center;gap:10px;padding:10px 6px 2px;margin-top:6px;border-top:1px solid var(--line)}
+  .side-user>div{flex:1;min-width:0}
+  .side-user b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side-user small{display:block;font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side-av{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--step-soft);color:var(--accent-ink);font-weight:800;font-size:14px;flex:none}
+  .side-out{border:1px solid var(--line);background:var(--panel);color:var(--bad-ink);width:34px;height:34px;border-radius:9px;display:grid;place-items:center;cursor:pointer;flex:none}
+  .wrap{max-width:1180px;width:100%;padding:24px 32px 60px}
+  .top{align-items:center;margin-bottom:16px}
+  .top #h1,.top .who,.top .actions{display:none!important}
+  .vtitle{display:block;margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+  .top .tsub{margin:4px 0 0}
+  [data-mv="alur"] .sec-t{display:none}
+}
 .searchrow{display:flex;gap:8px;flex:1;min-width:200px}
 .searchrow input{flex:1;min-width:0}
 .fbox{display:contents}
@@ -427,15 +485,15 @@ dialog .mb{overflow-x:hidden}
   .wrap{padding:0 14px 24px}
   /* app bar */
   .top{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -14px 14px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;border-bottom:1px solid var(--line);flex-wrap:nowrap;align-items:center}
-  .top h1{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top h1{display:none}
+  .vtitle{display:block;margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .home2 .card h3{flex-direction:row;align-items:center}
+  [data-mv="alur"] .sec-t{display:none}
   .tleft{min-width:0}
   .top .tsub{margin-top:2px}
   .top .who,.top .actions{display:none}
   .iconbtn{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;flex:none}
   /* views */
-  body:not([data-view="home"]) [data-mv="home"],
-  body:not([data-view="list"]) [data-mv="list"],
-  body:not([data-view="fu"]) [data-mv="fu"]{display:none!important}
   .grid2{display:block;margin-bottom:12px}
   .grid2 .card{margin-bottom:12px}
   /* alur jadi daftar vertikal */
@@ -490,8 +548,8 @@ dialog .mb{overflow-x:hidden}
   .st{font-size:12.5px;padding:3px 8px}
   /* tombol tambah & navigasi bawah */
   .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:18px;border:0;background:var(--btn);color:#fff;box-shadow:0 8px 24px rgba(10,20,40,.3);z-index:30;cursor:pointer}
-  .bnav{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-  .bnav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:9px 0 8px;font-size:12px;font-weight:600;color:var(--ink-3);cursor:pointer;min-height:60px}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .bnav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:9px 0 8px;font-size:11px;font-weight:600;color:var(--ink-3);cursor:pointer;min-height:60px;min-width:0}
   .bnav button.on{color:var(--accent-ink)}
   .bnav button.on svg{stroke-width:2.4}
   .nbadge:not(:empty){position:absolute;top:5px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--lost);color:#fff;font-size:11px;font-style:normal;font-weight:700;display:grid;place-items:center}
@@ -530,9 +588,29 @@ dialog .mb{overflow-x:hidden}
 </style>
 </head>
 <body>
+<div class="shell">
+<aside class="side" aria-label="Menu utama">
+  <div class="side-brand"><span class="side-logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
+  <button class="btn primary side-add" type="button" data-proxy="#addBtn">+ Tambah prospek</button>
+  <nav class="side-nav">
+    <div class="side-h">Menu</div>
+    <button type="button" class="snav" data-view="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Ringkasan</span></button>
+    <button type="button" class="snav" data-view="alur"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4M11.5 12c2 0 2-6 5-6M11.5 12c2 0 2 6 5 6"/></svg><span>Alur pengerjaan</span><i class="snum" id="nAlur"></i></button>
+    <button type="button" class="snav" data-view="list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Klien</span><i class="snum" id="nList"></i></button>
+    <button type="button" class="snav" data-view="fu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="sbadge" id="fuBadgeS"></i></button>
+    <button type="button" class="snav" data-view="sebaran"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sebaran</span></button>
+  </nav>
+  <div class="side-foot">
+    <button type="button" class="snav sx" data-proxy="#installBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Install aplikasi</span></button>
+    <button type="button" class="snav sx" data-proxy="#setBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Pengaturan</span></button>
+    <button type="button" class="snav sx" data-proxy="#sheetBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg><span>Buka Spreadsheet</span></button>
+    <div class="side-user"><span class="side-av" id="sideAv"></span><div><b id="sideName"></b><small id="sideSync"></small></div><button type="button" class="side-out" data-proxy="#logoutBtn" aria-label="Keluar" title="Keluar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button></div>
+  </div>
+</aside>
 <div class="wrap">
   <header class="top">
     <div class="tleft">
+      <h2 class="vtitle" id="vTitle">Ringkasan</h2>
       <h1 id="h1">Monitoring Prospek & Pengerjaan</h1>
       <p class="tsub"><span id="today" class="desk-only"></span> &nbsp;<span class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt">Tersimpan di Google Sheets</span></span></p>
       <p class="who">Masuk sebagai <b id="whoName"></b> · <button type="button" id="logoutBtn">Keluar</button></p>
@@ -567,9 +645,9 @@ dialog .mb{overflow-x:hidden}
     <span class="pb-sum" id="pbSum"></span>
   </section>
 
-  <section class="flow" data-mv="home" aria-label="Alur pengerjaan">
+  <section class="flow" data-mv="alur" aria-label="Alur pengerjaan">
     <div class="flow-head">
-      <div><h2>Alur pengerjaan</h2><div class="sub">Posisi tiap klien dihitung dari tahap terakhir yang sudah dicentang. Data baru masuk ke Prospek dulu, lalu mengalir ke Waiting DP dan tahap berikutnya. Klik tahap untuk melihat daftar kliennya.</div></div>
+      <div><h2 class="sec-t">Alur pengerjaan</h2><div class="sub">Posisi tiap klien dihitung dari tahap terakhir yang sudah dicentang. Data baru masuk ke Prospek dulu, lalu mengalir ke Waiting DP dan tahap berikutnya. Klik tahap untuk melihat daftar kliennya.</div></div>
       <div class="sub" id="flowSub"></div>
     </div>
     <div class="track"><div class="steps-row" id="stepsRow"></div></div>
@@ -578,13 +656,17 @@ dialog .mb{overflow-x:hidden}
 
   <section class="kpis" id="kpis" data-mv="home"></section>
   <section class="kpis fin" id="fin" data-mv="home"></section>
+  <section class="home2" data-mv="home">
+    <div class="card"><h3>Posisi alur <button type="button" class="lnk" data-go="alur">Lihat alur →</button></h3><div class="hflow" id="homeFlow"></div></div>
+    <div class="card"><h3>Follow-up hari ini <button type="button" class="lnk" data-go="fu">Lihat semua →</button></h3><ul class="fu" id="homeFu"></ul></div>
+  </section>
 
   <section class="grid2">
     <div class="card" data-mv="fu">
       <h3>Perlu di-follow-up <small id="fuCount"></small></h3>
       <ul class="fu" id="fuList"></ul>
     </div>
-    <div class="card" data-mv="home">
+    <div class="card" data-mv="sebaran">
       <h3>Sebaran
         <span class="seg" id="groupSeg">
           <button type="button" data-g="sumber" class="on">Sumber</button>
@@ -626,12 +708,15 @@ dialog .mb{overflow-x:hidden}
     <div class="foot"><span id="shown"></span><button class="btn sm" id="resetF" type="button">Reset filter</button></div>
   </section>
 </div>
+</div>
 
 <button class="fab mobile-only" id="fab" type="button" aria-label="Tambah prospek"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 <nav class="bnav mobile-only" aria-label="Navigasi">
-  <button type="button" data-view="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Ringkasan</span></button>
-  <button type="button" data-view="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Klien</span></button>
-  <button type="button" data-view="fu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="nbadge" id="fuBadge"></i></button>
+  <button type="button" data-view="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Ringkasan</span></button>
+  <button type="button" data-view="alur"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4M11.5 12c2 0 2-6 5-6M11.5 12c2 0 2 6 5 6"/></svg><span>Alur</span></button>
+  <button type="button" data-view="list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>Klien</span></button>
+  <button type="button" data-view="fu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span>Follow-up</span><i class="nbadge" id="fuBadge"></i></button>
+  <button type="button" data-view="sebaran"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sebaran</span></button>
 </nav>
 <dialog id="moreDlg" class="sheet" aria-label="Menu">
   <div class="sheet-in">
@@ -968,7 +1053,7 @@ function syncState(){
   else if(syncing||n){st="busy";txt=n?`Menyinkronkan ${n} perubahan…`:"Memeriksa data terbaru…"}
   else{st="ok";txt="Tersinkron dengan Google Sheets"}
   d.classList.toggle("on",st==="ok");d.style.background=st==="err"?"var(--lost)":st==="busy"?"var(--amber)":"";
-  $("#syncTxt").textContent=txt;
+  $("#syncTxt").textContent=txt;if($("#sideSync"))$("#sideSync").textContent=txt;
 }
 function scheduleSync(ms){clearTimeout(retryT);retryT=setTimeout(sync,ms)}
 function enqueue(op,id,rec){
@@ -1065,6 +1150,12 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
 window.addEventListener("online",()=>{lastErr="";backoff=0;syncState();sync()});
 window.addEventListener("offline",syncState);
 
+function syncSide(){
+  const vis=sel=>{const el=$(sel);return el&&!el.hidden&&el.style.display!=="none"};
+  document.querySelectorAll(".side-foot [data-proxy]").forEach(b=>{if(!b.classList.contains("side-out"))b.style.display=vis(b.dataset.proxy)?"":"none"});
+  const n=user?user.name:"";$("#sideName").textContent=$("#whoName").textContent||n;$("#sideAv").textContent=(n||"?").trim().charAt(0).toUpperCase();
+  $("#sideSync").textContent=$("#syncTxt").textContent;
+}
 function setTopH(){const t=document.querySelector(".top");if(t)document.documentElement.style.setProperty("--topH",t.offsetHeight+"px")}
 window.addEventListener("resize",()=>{setTopH();if(user)applyRole()});
 // template WA di pengaturan
@@ -1264,7 +1355,14 @@ function render(){
   const ib=FS.filter(([p,s])=>s.inbox).map(x=>x[0]);
   const due=FS.filter(([p,s])=>fuDue(s)).sort((a,b)=>a[1].date.localeCompare(b[1].date)).map(x=>x[0]);
   $("#fuCount").textContent=[due.length?due.length+" perlu FU":"",ib.length?ib.length+" di inbox":""].filter(Boolean).join(" · ");
-  const badge=due.length+ib.length;$("#fuBadge").textContent=badge?(badge>99?"99+":badge):"";
+  const badge=due.length+ib.length;$("#fuBadge").textContent=badge?(badge>99?"99+":badge):"";$("#fuBadgeS").textContent=$("#fuBadge").textContent;
+  $("#nList").textContent=B.length||"";$("#nAlur").textContent=B.filter(p=>["prospek","proses"].includes(phase(p))).length||"";
+  syncSide();
+  // ringkasan: posisi alur + follow-up teratas
+  const mx2=Math.max(1,...cnt);
+  $("#homeFlow").innerHTML=cells.map(c=>{const n=cnt[c.i+1];return `<button type="button" class="hf" data-step="${c.i}"><span class="hf-l">${esc(c.l)}</span><span class="hf-t"><i style="width:${n/mx2*100}%"></i></span><b class="num">${n}</b></button>`}).join("");
+  const topFu=ib.map(p=>[p,"Inbox"]).concat(due.map(p=>[p,fuState(p).label])).slice(0,6);
+  $("#homeFu").innerHTML=topFu.length?topFu.map(([p,l])=>`<li><div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${isAdmin()?" · "+esc(p.pic||""):""}</span></div><span class="fuc ${l==="Inbox"?"ib":"due"}">${esc(l)}</span></li>`).join("")+(due.length+ib.length>6?`<li class="empty">+${due.length+ib.length-6} lainnya</li>`:""):`<li class="empty">Tidak ada follow-up hari ini.</li>`;
   updFilterCount();
   const who=p=>`<div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${p.paket?" "+esc(p.paket):""}${isAdmin()?" · "+esc(p.pic||""):""}</span></div>`;
   const wa=p=>{const s=fuState(p),w=waFuLink(p,s.label);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener" title="Kirim template ${esc(s.label||"")}">WA ${esc(s.label||"")}</a>`:""};
@@ -1343,13 +1441,14 @@ $("#clearStep").onclick=()=>{stepFilter=null;render()};
 let busy=new Set();
 document.addEventListener("click",async e=>{
   if(e.target.closest("a"))return;
-  const sc=e.target.closest("[data-step]");if(sc){const i=Number(sc.dataset.step);stepFilter=stepFilter===i?null:i;if(stepFilter!==null)tab="semua";render();if(stepFilter!==null&&isMobile())setView("list");return}
-  const lb=e.target.closest("[data-label]");if(lb){labelFilter=labelFilter===lb.dataset.label?"":lb.dataset.label;render();if(labelFilter&&isMobile())setView("list");return}
-  const vw=e.target.closest(".bnav [data-view]");if(vw){setView(vw.dataset.view);return}
+  const sc=e.target.closest("[data-step]");if(sc){const i=Number(sc.dataset.step);stepFilter=stepFilter===i?null:i;if(stepFilter!==null)tab="semua";render();if(stepFilter!==null)setView("list");return}
+  const lb=e.target.closest("[data-label]");if(lb){labelFilter=labelFilter===lb.dataset.label?"":lb.dataset.label;render();if(labelFilter)setView("list");return}
+  const go=e.target.closest("[data-go]");if(go){setView(go.dataset.go);return}
+  const vw=e.target.closest(".bnav [data-view],.side [data-view]");if(vw){setView(vw.dataset.view);return}
   const fb=e.target.closest("[data-fu]");if(fb){markFu(fb.dataset.fu);return}
   const fc=e.target.closest("[data-fuch]");if(fc){chooseFu(fc.dataset.id,fc.dataset.fuch);return}
   const iv=e.target.closest("[data-inv]");if(iv){openInvoice(iv.dataset.inv);return}
-  const px=e.target.closest("[data-proxy]");if(px){$("#moreDlg").close();const t=$(px.dataset.proxy);if(t)t.click();return}
+  const px=e.target.closest("[data-proxy]");if(px){if($("#moreDlg").open)$("#moreDlg").close();const t=$(px.dataset.proxy);if(t)t.click();return}
   const tb=e.target.closest("[data-tab]");if(tb){tab=tb.dataset.tab;render();return}
   const ed=e.target.closest("[data-edit]");if(ed&&!e.target.closest("[data-tog]")){openForm(ed.dataset.edit);return}
   const gs=e.target.closest("#groupSeg button");if(gs){groupBy=gs.dataset.g;document.querySelectorAll("#groupSeg button").forEach(b=>b.classList.toggle("on",b===gs));render();return}
@@ -1709,7 +1808,8 @@ $("#ibLogo").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)
 let tt;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2200)}
 // ---------- mobile ----------
 const isMobile=()=>window.matchMedia?window.matchMedia("(max-width:767px)").matches:false;
-function setView(v){document.body.dataset.view=v;document.querySelectorAll(".bnav [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
+const VIEW_T={home:"Ringkasan",alur:"Alur pengerjaan",list:"Klien",fu:"Follow-up",sebaran:"Sebaran"};
+function setView(v){if(!VIEW_T[v])v="home";document.body.dataset.view=v;$("#vTitle").textContent=VIEW_T[v];document.querySelectorAll(".bnav [data-view],.side [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
 setView(ls.get("pm_view","list"));
 $("#fab").onclick=()=>openForm();
 function updFilterCount(){const n=["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].filter(x=>$(x).value).length;$("#fCount").textContent=n||""}
