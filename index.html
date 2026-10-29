@@ -231,6 +231,7 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 .fuch{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--ink-2);margin-top:10px;max-width:360px}
 .fuch select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--ink)}
 @media (max-width:575px){.fugrid{grid-template-columns:repeat(2,1fr)}}
+#frm [name="sumberLain"]{margin-top:8px}
 .dup-hint{color:var(--warn-ink);font-weight:600}
 .req-note{margin:14px 0 0;font-size:13px;color:var(--ink-2)}
 .st.wk{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
@@ -817,7 +818,7 @@ dialog .mb{overflow-x:hidden}
           <label><span class="lt">Nama kontak <span class="rq" aria-hidden="true">*</span></span><input name="nama" autocomplete="off" aria-required="true"></label>
           <label class="qh">Perusahaan / calon PT<input name="perusahaan" autocomplete="off"></label>
           <label>No. WhatsApp<input name="wa" inputmode="tel" placeholder="0812…" autocomplete="off"><span class="hint dup-hint" id="dupHint"></span></label>
-          <label><span class="lt">Sumber iklan <span class="rq" aria-hidden="true">*</span></span><select name="sumber" aria-required="true"></select><span class="hint" id="brandHint"></span></label>
+          <label><span class="lt">Sumber iklan <span class="rq" aria-hidden="true">*</span></span><select name="sumber" aria-required="true"></select><input name="sumberLain" placeholder="Ketik sumber, mis. TikTok, Pameran, Teman" autocomplete="off" hidden><span class="hint" id="brandHint"></span></label>
           <label><span class="lt">PIC <span class="rq" aria-hidden="true">*</span></span><select name="pic" aria-required="true"></select></label>
           <label><span class="lt">Tanggal masuk <span class="rq" aria-hidden="true">*</span></span><input name="created" type="date" aria-required="true"></label>
           <div hidden><select name="bulan"></select><select name="minggu"></select></div>
@@ -1273,10 +1274,10 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
 function opts(el,arr,all){const v=el.value;el.innerHTML=(all!=null?`<option value="">${all}</option>`:"")+arr.map(x=>typeof x==="string"?`<option value="${esc(x)}">${esc(x)}</option>`:`<option value="${esc(x.v)}">${esc(x.t)}</option>`).join("");if([...el.options].some(o=>o.value===v))el.value=v}
 function applySettings(){
   opts($("#fBrand"),settings.brands,"Semua brand");
-  opts($("#fSumber"),settings.sumber.map(s=>({v:s.n,t:s.n+" ("+s.b+")"})),"Semua sumber");
+  opts($("#fSumber"),settings.sumber.map(s=>({v:s.n,t:s.n+" ("+s.b+")"})).concat([{v:"__other",t:"Other (sumber lain)"}]),"Semua sumber");
   opts($("#fPic"),settings.pics,"Semua PIC");
   const f=$("#frm").elements;
-  opts(f.sumber,settings.sumber.map(s=>({v:s.n,t:s.n+" — "+s.b})),"Pilih sumber");
+  opts(f.sumber,settings.sumber.map(s=>({v:s.n,t:s.n+" — "+s.b})).concat([{v:"__other",t:"Other (ketik sendiri)"}]),"Pilih sumber");
   opts(f.pic,settings.pics,"Pilih PIC");
   const vos=[...new Set([...settings.vo,...items.map(p=>p.vo).filter(Boolean)])];
   $("#voList").innerHTML=vos.map(v=>`<option value="${esc(v)}">`).join("");
@@ -1368,7 +1369,7 @@ function base(){
   const q=$("#q").value.trim().toLowerCase(),b=$("#fBrand").value,s=$("#fSumber").value,pc=$("#fPic").value,l=$("#fLayanan").value,st=$("#fStatus").value;
   return items.filter(p=>{
     if(b&&brandOf(p)!==b)return false;
-    if(s&&p.sumber!==s)return false;
+    if(s&&(s==="__other"?(!p.sumber||settings.sumber.some(x=>x.n===p.sumber)):p.sumber!==s))return false;
     if(pc&&p.pic!==pc)return false;
     if(l&&p.layanan!==l)return false;
     if(st&&!has(p,st))return false;
@@ -1597,7 +1598,19 @@ function updPaket(keep){const a=paketFor(F.layanan.value);$("#paketWrap").style.
   else if(a==="manual"){F.paketManual.value=v||"";F.paket.value=""}
   else{F.paket.value="";F.paketManual.value=""}}
 F.layanan.addEventListener("change",()=>updPaket(""));
-function updBrand(){const s=settings.sumber.find(x=>x.n===F.sumber.value);$("#brandHint").textContent=s?"Brand: "+s.b:""}
+// sumber "Other": ketik sendiri
+const isOtherSrc=()=>F.sumber.value==="__other";
+const sumberVal=()=>isOtherSrc()?String(F.sumberLain.value||"").trim():F.sumber.value;
+function updBrand(){
+  const o=isOtherSrc();F.sumberLain.hidden=!o;
+  const s=settings.sumber.find(x=>x.n===F.sumber.value);
+  $("#brandHint").textContent=s?"Brand: "+s.b:o?"Brand mengikuti pilihan Brand invoice":"";
+}
+function setSumberField(v){
+  const known=!v||settings.sumber.some(x=>x.n===v)||v==="__other";
+  F.sumber.value=known?(v||""):"__other";F.sumberLain.value=known?"":v;updBrand();
+}
+F.sumber.addEventListener("change",()=>{if(isOtherSrc())setTimeout(()=>F.sumberLain.focus(),0)});
 F.sumber.addEventListener("change",updBrand);
 function formMoney(){return {layanan:F.layanan.value,ppn:F.ppn.value,priceDeal:moneyVal("priceDeal"),diskon:moneyVal("diskon"),dp:moneyVal("dp"),lunas:moneyVal("lunas"),pph:moneyVal("pph"),retur:moneyVal("retur")}}
 function updSum(){const m=money(formMoney());const f=formMoney();
@@ -1617,7 +1630,8 @@ function openForm(id){
   $("#qToggle").hidden=!!p;setQuick(quickMode);
   $("#delBtn").style.visibility=p?"visible":"hidden";
   const d=p||{created:TODAY,sumber:$("#fSumber").value,pic:isAdmin()?$("#fPic").value:user.name,layanan:$("#fLayanan").value,statuses:["Prospek Baru"]};
-  ["nama","perusahaan","wa","sumber","pic","vo","kota","created","tglDp","tglLunas","keterangan","catatan"].forEach(k=>F[k].value=d[k]||"");
+  ["nama","perusahaan","wa","pic","vo","kota","created","tglDp","tglLunas","keterangan","catatan"].forEach(k=>F[k].value=d[k]||"");
+  setSumberField(d.sumber||"");
   ["nilai","priceDeal","diskon","dp","lunas","pph","retur"].forEach(k=>setMoney(k,d[k]));
   setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");updPaket(d.paket||"");updBrand();
   const s=tags(d);frm.querySelectorAll('input[name="stat"]').forEach(c=>c.checked=s.includes(c.value));
@@ -1631,6 +1645,7 @@ frm.addEventListener("submit",async e=>{
   const v=k=>String(F[k].value||"").trim();
   if(!v("nama")){$("#err").textContent="Isi nama kontak dulu.";F.nama.focus();return}
   if(!v("sumber")){$("#err").textContent="Pilih sumber iklan.";F.sumber.focus();return}
+  if(isOtherSrc()&&!sumberVal()){$("#err").textContent="Ketik sumber lainnya dulu.";F.sumberLain.focus();return}
   if(isAdmin()&&!v("pic")){$("#err").textContent="Pilih PIC.";F.pic.focus();return}
   if(!v("created")){$("#err").textContent="Isi tanggal masuk.";F.created.focus();return}
   if(!v("layanan")){$("#err").textContent="Pilih layanan.";F.layanan.focus();return}
@@ -1638,9 +1653,10 @@ frm.addEventListener("submit",async e=>{
   const prev=editingId?items.find(x=>x.id===editingId):null;
   const wk=v("minggu")||weekOf(v("created")||TODAY);
   const st=(wk?[wk]:[]).concat([...frm.querySelectorAll('input[name="stat"]:checked')].map(c=>c.value).filter(x=>!WEEKS.includes(x)));
-  const src=settings.sumber.find(x=>x.n===v("sumber"));
+  const src=settings.sumber.find(x=>x.n===sumberVal());
+  const invB=v("invBrand"),brFromInv=settings.brands.find(x=>invBrandFor(x)===invB&&x)||"";
   const p=Object.assign({id:editingId||("p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
-    nama:v("nama"),perusahaan:v("perusahaan"),wa:v("wa"),sumber:v("sumber"),brand:src?src.b:(prev&&prev.brand)||"",pic:isAdmin()?v("pic"):user.name,
+    nama:v("nama"),perusahaan:v("perusahaan"),wa:v("wa"),sumber:sumberVal(),brand:src?src.b:(brFromInv||(prev&&prev.brand)||""),pic:isAdmin()?v("pic"):user.name,
     bulan:(v("created")||TODAY).slice(0,7),minggu:weekOf(v("created")||TODAY),layanan:v("layanan"),paket:Array.isArray(paketFor(v("layanan")))?v("paket"):v("paketManual"),vo:v("vo"),kota:v("kota"),created:v("created")||TODAY,
     nilai:moneyVal("nilai"),statuses:st,tglDp:v("tglDp"),tglLunas:v("tglLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
   p.selesai=st.includes("Serah Terima")?((prev&&prev.selesai)||TODAY):"";
