@@ -250,7 +250,7 @@ function checkWa(token, wa, id, grup) {
     .filter(o => waKey_(o.wa) === key && o.id !== String(id || '') && !(grup && o.grup === grup))
     .sort((a, b) => String(b.created).localeCompare(String(a.created)))
     .slice(0, 5)
-    .map(o => ({ pic: o.pic, created: o.created, layanan: o.layanan, statuses: o.statuses, mine: norm_(o.pic) === norm_(u.name) }));
+    .map(o => ({ pic: o.pic, created: o.created, layanan: o.layanan, sumber: o.sumber, statuses: o.statuses, paid: (Number(o.dp) || 0) > 0 || (Number(o.lunas) || 0) > 0, mine: norm_(o.pic) === norm_(u.name) }));
 }
 
 function saveSettings(token, s) {

@@ -239,6 +239,8 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 #multiBox{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 #multiBox[hidden]{display:none}
 #multiBox textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--ink);width:100%;resize:vertical}
+.opill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--deal-soft);color:var(--ok-ink);white-space:nowrap;margin-left:4px;vertical-align:1px}
+.dup-box .mkrep{align-self:flex-start;margin-top:4px}
 .gpill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--step-soft);color:var(--accent-ink);border:0;cursor:pointer;white-space:nowrap}
 .inv-grp{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .dup-hint{color:var(--warn-ink);font-weight:600}
@@ -1143,6 +1145,25 @@ function fuSeq(p,done){
 const isMember=p=>!!p.grup&&p.grup!==p.id;
 const groupOf=p=>p&&p.grup?items.filter(x=>x.grup===p.grup):p?[p]:[];
 const leadKey=p=>p.grup||p.id;
+// ---------- riwayat order per klien (dikenali dari nomor WA) ----------
+// "pernah closing" = sudah bayar DP/lunas, atau sudah lewat Waiting DP, atau ditandai Klien / Serah Terima
+const paidRec=p=>hasDp(p)||N(p.lunas)>0||curStep(p)>=1||has(p,"Klien")||has(p,"Serah Terima");
+// sumber repeat per brand (mis. vorepeat = Vorent, repeat = Izinin, corepeat = Echoffice)
+const isRepeatSrc=v=>/repeat/i.test(v||"");
+function repeatSrc(brand){const R=settings.sumber.filter(x=>isRepeatSrc(x.n)),m=brand&&R.find(x=>norm(x.b)===norm(brand));return (m||R[0]||{}).n||""}
+let ordCache={ref:null,len:-1,map:null};
+function orderMap(){
+  // id -> {k: jumlah order (closing) sebelumnya, prev:[tanggal order sebelumnya]}
+  if(ordCache.ref===items&&ordCache.len===items.length)return ordCache.map;
+  const byWa={};items.forEach(p=>{const k=waKey(p.wa);if(k)(byWa[k]=byWa[k]||[]).push(p)});
+  const map={};
+  Object.values(byWa).forEach(arr=>{
+    const leads={};arr.forEach(p=>{const L=leadKey(p),o=leads[L]||(leads[L]={c:p.created||"",id:L,paid:false});if((p.created||"")<o.c)o.c=p.created||"";if(paidRec(p))o.paid=true});
+    const paid=Object.values(leads).filter(o=>o.paid).sort((a,b)=>a.c.localeCompare(b.c)||a.id.localeCompare(b.id));
+    arr.forEach(p=>{const me=leads[leadKey(p)],prev=paid.filter(o=>o.id!==me.id&&(o.c<me.c||(o.c===me.c&&o.id<me.id)));if(prev.length)map[p.id]={k:prev.length,prev:prev.map(o=>o.c)}});
+  });
+  ordCache={ref:items,len:items.length,map};return map;
+}
 function fuState(p){
   if(isMember(p))return {active:false};
   const ph=phase(p);
@@ -1527,12 +1548,13 @@ function render(){
     <div class="kpi"><div class="l">Dalam pengerjaan</div><div class="n num">${proc.length}</div><div class="h">${proc.filter(p=>curStep(p)===0).length} waiting DP · ${proc.filter(p=>has(p,"Waiting Lunas")&&!has(p,"Lunas")).length} menunggu lunas</div></div>
     <div class="kpi"><div class="l">Serah terima bulan ini</div><div class="n num">${doneMonth}</div><div class="h">total selesai: ${B.filter(p=>phase(p)==="selesai").length}</div></div>
     <div class="kpi ${late?"warn":""}"><div class="l">Follow-up belum dikerjakan</div><div class="n num">${late}</div><div class="h">${inboxN} di inbox · ${missedN} ada FU terlewat</div></div>`;
+  const OMk=orderMap(),RP=B.filter(p=>OMk[p.id]&&paidRec(p)),rpLead=new Set(RP.map(leadKey)).size,rpVal=RP.reduce((a,p)=>a+N(p.priceDeal),0);
   const C=B.filter(isClient);let deal=0,dp=0,lun=0,sisa=0,pph=0,ret=0,disk=0;
   C.forEach(p=>{const m=money(p);deal+=N(p.priceDeal);dp+=N(p.dp);lun+=N(p.lunas);sisa+=Math.max(0,m.sisa);pph+=N(p.pph);ret+=N(p.retur);disk+=N(p.diskon)});
   // Total Waiting DP: jumlah price deal semua data yang posisinya di Waiting DP (sama dengan lingkaran Waiting DP di alur)
   const wdp=B.filter(p=>["prospek","proses"].includes(phase(p))&&curStep(p)===0),wdpVal=wdp.reduce((a,p)=>a+N(p.priceDeal),0);
   $("#fin").innerHTML=`
-    <div class="kpi"><div class="l">Total price deal</div><div class="n num">${rpS(deal)}</div><div class="h">diskon ${rpS(disk)}</div></div>
+    <div class="kpi"><div class="l">Total price deal</div><div class="n num">${rpS(deal)}</div><div class="h">diskon ${rpS(disk)} · repeat ${rpLead} order (${rpS(rpVal)})</div></div>
     <div class="kpi"><div class="l">Uang masuk</div><div class="n num">${rpS(dp+lun-ret)}</div><div class="h">DP ${rpS(dp)} · lunas ${rpS(lun)} · return ${rpS(ret)}</div></div>
     <div class="kpi"><div class="l">Sisa tagihan</div><div class="n num">${rpS(sisa)}</div><div class="h">${C.filter(p=>money(p).sisa>0).length} klien belum lunas</div></div>
     <div class="kpi"><div class="l">Total Waiting DP</div><div class="n num">${rpS(wdpVal)}</div><div class="h">dari ${wdp.filter(p=>N(p.priceDeal)).length} data ber-price deal · ${wdp.length} di Waiting DP</div></div>`;
@@ -1600,7 +1622,9 @@ function render(){
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
   const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
-  const gp=p=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""};
+  const OM=orderMap();
+  const op=p=>{const o=OM[p.id];return o?` <span class="opill" title="Klien langganan. Order sebelumnya: ${esc(o.prev.map(d=>d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"?").join(", "))}">Order ke-${o.k+1}</span>`:""};
+  const gp=p=>op(p)+(()=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""})();
   const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
     (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
          :`<td>${tagHtml(p)}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td><td class="num">${fmtD(p.created)}<div class="co">${esc(mingguOf(p))} · ${esc(ymShort(bulanOf(p)))}</div></td>`)+
@@ -1702,6 +1726,9 @@ function setSumberField(v){
 }
 F.sumber.addEventListener("change",()=>{if(isOtherSrc())setTimeout(()=>F.sumberLain.focus(),0)});
 F.sumber.addEventListener("change",updBrand);
+// PIC memilih sumber sendiri -> saran Repeat otomatis tidak menimpa pilihannya
+let sumberTouched=false,repAuto=null;
+F.sumber.addEventListener("change",()=>{sumberTouched=true;repAuto=null;if(typeof paintDup==="function")paintDup()});
 function formMoney(){return {layanan:F.layanan.value,ppn:F.ppn.value,priceDeal:moneyVal("priceDeal"),diskon:moneyVal("diskon"),dp:moneyVal("dp"),lunas:moneyVal("lunas"),pph:moneyVal("pph"),retur:moneyVal("retur")}}
 function updSum(){const m=money(formMoney());const f=formMoney();
   updPpnUI(m);
@@ -1890,7 +1917,7 @@ function invFormFill(d,p){
   syncItems();
   renderRek(rekOf(d));
   $("#invFromForm").hidden=!p;
-  newOldTouched=false;dupKey="";dupRemote=[];$("#dupHint").textContent="";$("#dupHint").classList.remove("dup-box");if(!p)autoNewOld();
+  newOldTouched=false;sumberTouched=false;repAuto=null;dupKey="";dupRemote=[];$("#dupHint").textContent="";$("#dupHint").classList.remove("dup-box");if(!p)autoNewOld();
   updSaveLabel();
 }
 function updSaveLabel(){
@@ -1919,11 +1946,26 @@ function paintDup(){
   const rows=loc.map(p=>({pic:p.pic,created:p.created,layanan:p.layanan,ph:phase(p),nama:p.nama,mine:true}))
     .concat(key===dupKey?dupRemote.filter(r=>!r.mine&&!loc.some(p=>p.pic===r.pic&&p.created===r.created&&p.layanan===r.layanan)).map(r=>({pic:r.pic,created:r.created,layanan:r.layanan,ph:phase({statuses:r.statuses||[],created:r.created})})):[]);
   const h=$("#dupHint");
+  // saran sumber Repeat: hanya kalau nomor ini pernah closing (bukan cuma tanya-tanya / lose)
+  const remPaid=key===dupKey?dupRemote.filter(r=>!r.mine&&(r.paid||paidRec({statuses:r.statuses||[]}))):[];
+  const locPaid=loc.filter(paidRec).sort((a,b)=>String(b.created).localeCompare(String(a.created)));
+  const paidHist=!!(locPaid.length||remPaid.length);
+  // brand repeat: ikut sumber yang sedang dipilih, kalau belum ada ikut brand order terakhir
+  const cur=sumberVal(),histBrand=locPaid.length?brandOf(locPaid[0]):remPaid.length?brandOfSumber(remPaid[0].sumber):"";
+  const rs=repeatSrc((cur&&!isRepeatSrc(cur)&&brandOfSumber(cur))||histBrand);
+  let repTxt="";
+  if(!editingId){
+    if(paidHist&&rs&&!sumberTouched&&!isRepeatSrc(sumberVal())){repAuto=sumberVal();setSumberField(rs)}
+    else if(!paidHist&&repAuto!==null&&!sumberTouched){setSumberField(repAuto);repAuto=null}
+    if(paidHist)repTxt=!rs?`<small>Klien ini pernah closing. Tambahkan sumber "repeat" di Pengaturan supaya bisa dipilih.</small>`:isRepeatSrc(sumberVal())?`<small><b>Pernah closing → sumber otomatis ${esc(sumberVal())}.</b> Ganti kalau perlu.</small>`:`<small>Klien ini pernah closing, biasanya sumbernya repeat.</small><button type="button" class="btn sm mkrep" data-mkrep="${esc(rs)}">Jadikan ${esc(rs)}</button>`;
+    else if(rows.length)repTxt=`<small>Belum pernah closing, jadi sumber tetap sesuai asal lead (mis. iklan).</small>`;
+  }
   if(!rows.length){const hit=findReturning();h.innerHTML=hit?esc(`Pernah tercatat: ${hit.nama}${hit.created?" ("+fmtD(hit.created)+")":""}, otomatis Prospek Lama`):"";h.classList.remove("dup-box");return}
   const other=rows.some(r=>norm(r.pic)!==norm(user&&user.name));
   h.classList.add("dup-box");
-  h.innerHTML=`<b>⚠️ Nomor ini sudah tercatat${other?" (dipegang PIC lain)":""}</b>`+rows.slice(0,4).map(r=>`<span>${r.nama?esc(r.nama)+" · ":""}PIC <b>${esc(r.pic||"–")}</b> · ${esc(fmtDY(r.created)||"–")}${r.layanan?" · "+esc(r.layanan):""} · ${esc(PH_LBL[r.ph]||"")}</span>`).join("")+(rows.length>4?`<span>+${rows.length-4} lainnya</span>`:"")+`<small>Tetap bisa disimpan. Pastikan bukan lead yang sama${other?", koordinasikan dengan PIC-nya":""}.${editingId?"":" Status otomatis Prospek Lama."}</small>`;
+  h.innerHTML=`<b>⚠️ Nomor ini sudah tercatat${other?" (dipegang PIC lain)":""}</b>`+rows.slice(0,4).map(r=>`<span>${r.nama?esc(r.nama)+" · ":""}PIC <b>${esc(r.pic||"–")}</b> · ${esc(fmtDY(r.created)||"–")}${r.layanan?" · "+esc(r.layanan):""} · ${esc(PH_LBL[r.ph]||"")}</span>`).join("")+(rows.length>4?`<span>+${rows.length-4} lainnya</span>`:"")+`<small>Tetap bisa disimpan. Pastikan bukan lead yang sama${other?", koordinasikan dengan PIC-nya":""}.${editingId?"":" Status otomatis Prospek Lama."}</small>`+repTxt;
 }
+$("#dupHint").addEventListener("click",e=>{const mk=e.target.closest("[data-mkrep]");if(mk){e.preventDefault();e.stopPropagation();setSumberField(mk.dataset.mkrep);sumberTouched=true;repAuto=null;paintDup()}});
 function dupRemoteCheck(){
   clearTimeout(dupT);const key=waKey($("#frm").elements.wa.value);
   if(!key){dupKey="";dupRemote=[];return}
