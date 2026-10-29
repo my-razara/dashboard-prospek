@@ -242,6 +242,8 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 .gpill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--step-soft);color:var(--accent-ink);border:0;cursor:pointer;white-space:nowrap}
 .inv-grp{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .dup-hint{color:var(--warn-ink);font-weight:600}
+.dup-hint.dup-box{display:flex;flex-direction:column;gap:3px;margin-top:6px;padding:9px 11px;border-radius:10px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink);font-weight:500;font-size:12.5px;line-height:1.45}
+.dup-box>b{color:var(--warn-ink)}.dup-box small{color:var(--ink-2)}
 .req-note{margin:14px 0 0;font-size:13px;color:var(--ink-2)}
 .st.wk{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
 .chip input:checked:disabled+span{opacity:1}
@@ -552,6 +554,38 @@ dialog .mb{overflow-x:hidden}
 .iv-note{margin-top:auto;padding-top:12px;border-top:1px solid #eceef2;font-size:11px;color:#8a909c}
 .iv-stamp{position:absolute;top:18px;right:410px;transform:rotate(-14deg);border:3px solid #16a34a;color:#16a34a;font-weight:800;font-size:26px;letter-spacing:.14em;padding:4px 16px;border-radius:8px;opacity:.75}
 .iv-stamp.draft{border-color:#c2c7d0;color:#a3a9b5}
+.kw-from{margin-top:22px;color:#555b66;font-size:12px}
+.kw-from b{display:block;font-size:13px;font-weight:800;color:#1f2430;text-transform:uppercase}
+.kw-body{margin-top:26px;border:1px solid #e3e5ea;border-left:4px solid var(--acc);border-radius:10px;padding:8px 22px}
+.kw-row{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:13px 0;border-bottom:1px dashed #e3e5ea;align-items:baseline}
+.kw-row:last-child{border-bottom:0}
+.kw-row>span{color:#8a909c;font-size:12.5px}
+.kw-row>div{color:#1f2430;font-size:13.5px}
+.kw-row b{font-weight:800;text-transform:uppercase}
+.kw-up{color:#6b7280;font-size:12px}
+.kw-amt{font-size:26px;font-weight:800;color:var(--acc);letter-spacing:-.01em;line-height:1.2}
+.kw-say{margin-top:4px;font-style:italic;color:#6b7280;font-size:12px}
+.kw-foot{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-top:28px}
+.kw-sum{width:380px;display:flex;flex-direction:column;gap:7px}
+.kw-sum .iv-r{padding:0}
+.kw-sum .iv-r.bal{padding:9px 10px}
+.kw-sign{position:relative;min-width:210px}
+.kw-sign .sp{height:58px}
+.kw-stamp{position:absolute;left:50%;top:30px;transform:translateX(-50%) rotate(-12deg);border:3px solid #16a34a;color:#16a34a;font-weight:800;font-size:20px;letter-spacing:.14em;padding:3px 12px;border-radius:8px;opacity:.7}
+#invMode{flex:none;display:flex;flex-wrap:wrap;margin:8px 16px;gap:4px}
+#invMode button{flex:1 0 auto;white-space:nowrap;min-height:36px}
+.inv-grp[hidden]{display:none!important}
+#waSeg,#invMode{border:0;overflow:visible;border-radius:0}
+#waSeg button,#invMode button{border:1px solid var(--line);border-radius:999px}
+#waSeg button.on,#invMode button.on{border-color:var(--btn)}
+#invMode button[hidden]{display:none}
+#invGrpWrap{flex:none}
+#invMode[hidden]{display:none}
+#waDlg{width:min(520px,96vw)}
+#waDlg textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--ink);line-height:1.5;resize:vertical}
+#waSeg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+#waSeg button{flex:1 0 auto;white-space:nowrap;min-height:36px;padding:0 12px}
+#waDlg .wa-go{display:inline-flex;align-items:center;justify-content:center;background:#16a34a;border-color:#16a34a;color:#fff;text-decoration:none}
 @media print{@page{size:A4;margin:0}body.printing{padding:0!important;background:#fff}body.printing>*:not(#printArea){display:none!important}body.printing #printArea{position:static;left:0}}
 
 @media (max-width:767px){
@@ -646,7 +680,7 @@ dialog .mb{overflow-x:hidden}
   .irow input{font-size:16px;min-height:46px}
   #invDlg{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-radius:0}
   #invDlg .ih{display:grid;grid-template-columns:1fr auto;padding-top:calc(10px + env(safe-area-inset-top,0px))}
-  #invDlg .iact{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1.3fr}
+  #invDlg .iact{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
   #invDlg .ix{order:0}
   #invDlg .iact .btn{min-height:40px}
   #invBody{padding:12px 8px calc(12px + env(safe-area-inset-bottom,0px))}
@@ -903,8 +937,8 @@ dialog .mb{overflow-x:hidden}
     <div class="mh"><h2 id="setTitle">Pengaturan</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
     <div class="mb">
       <div class="set">
-        <div class="full sec"><h4>Template WA follow-up</h4>
-          <p class="hint" style="margin:0 0 10px">Pesan otomatis saat tombol WA di follow-up ditekan. Kata dalam kurung kurawal diganti otomatis: {nama}, {perusahaan}, {layanan}, {brand}, {pic}.</p>
+        <div class="full sec"><h4>Template WA</h4>
+          <p class="hint" style="margin:0 0 10px">Pesan otomatis saat tombol WA ditekan. Kata dalam kurung kurawal diganti otomatis: {nama}, {perusahaan}, {layanan}, {brand}, {pic}, {invoice}, {total}, {dp}, {pelunasan}, {sisa}, {jatuhtempo}, {rekening}.</p>
           <div class="kat" id="tplSeg"></div>
           <textarea id="tplText" rows="6" style="width:100%" aria-label="Isi template"></textarea>
           <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span class="hint" id="tplNote"></span><button class="btn sm" type="button" id="tplReset">Pakai template bawaan</button></div>
@@ -947,11 +981,13 @@ dialog .mb{overflow-x:hidden}
   </form>
 </dialog>
 <dialog id="invDlg" aria-label="Invoice">
-  <div class="ih"><b>Invoice</b><button class="x ix" type="button" data-close aria-label="Tutup">×</button><div class="iact">
+  <div class="ih"><b id="invTtl">Invoice</b><button class="x ix" type="button" data-close aria-label="Tutup">×</button><div class="iact">
     <button class="btn sm" type="button" id="invEdit">Ubah data</button>
     <button class="btn sm" type="button" id="invPrint">Cetak</button>
-    <button class="btn sm primary" type="button" id="invPdf">Download PDF</button>
+    <button class="btn sm" type="button" id="invPdf">Download PDF</button>
+    <button class="btn sm primary" type="button" id="invShare">Kirim ke WA</button>
     </div></div>
+  <div class="kat" id="invMode" hidden><button type="button" data-im="inv">Invoice</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
   <div class="inote" id="invNote" hidden></div>
   <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
@@ -969,6 +1005,15 @@ dialog .mb{overflow-x:hidden}
     </div></div>
     <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn primary" type="submit">Simpan</button></div></div>
   </form>
+</dialog>
+<dialog id="waDlg" class="paydlg" aria-labelledby="waTtl">
+  <div class="mh"><h2 id="waTtl">Kirim WhatsApp</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+  <div class="mb">
+    <div class="kat" id="waSeg"></div>
+    <textarea id="waText" rows="9" aria-label="Isi pesan"></textarea>
+    <p class="hint" style="margin:6px 0 0">Pesan bisa diubah dulu sebelum dikirim. Template diatur admin di Pengaturan.</p>
+  </div>
+  <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" id="waCopy">Salin</button><a class="btn primary wa-go" id="waGo" href="#" target="_blank" rel="noopener">Buka WhatsApp</a></div></div>
 </dialog>
 <div class="login" id="login" hidden>
   <form id="loginFrm" novalidate>
@@ -1064,10 +1109,26 @@ FU5:"Halo Kak {nama} 👋\nTerkait {layanan}, untuk memulai proses cukup dengan 
 FU6:"Halo Kak {nama}, izin mengingatkan kembali untuk pembayaran DP {layanan} ya, Kak.\nBegitu DP masuk, tim kami langsung mulai proses hari itu juga.\n\nKalau ada kendala pembayaran, kabari saya saja ya 🙏",
 PRM1:"Halo Kak {nama} 🎉\nKabar baik! Saat ini {brand} sedang ada promo khusus untuk {layanan}.\n\nPromo ini terbatas, mau saya bantu amankan slotnya, Kak?",
 PRM2:"Halo Kak {nama}, mengingatkan promo {layanan} dari {brand} akan segera berakhir ⏳\n\nKalau Kakak masih berminat, kabari saya hari ini ya supaya harga promonya masih bisa dipakai 🙏"};
+Object.assign(WA_TPL_DEF,{
+INV:"Halo Kak {nama} 🙏\nBerikut kami kirimkan invoice {invoice} untuk {layanan}.\n\nTotal: {total}\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nMohon kirimkan bukti transfer setelah pembayaran ya, Kak. Terima kasih 🙏",
+TAGIH:"Halo Kak {nama}, semoga sehat selalu 🙏\nIzin mengingatkan untuk pelunasan {layanan} (invoice {invoice}).\n\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nKalau sudah transfer, mohon kirimkan buktinya ya, Kak. Terima kasih 🙏",
+TQDP:"Terima kasih Kak {nama} 🙏\nPembayaran DP sebesar {dp} untuk {layanan} sudah kami terima ✅\n\nKwitansi kami lampirkan. Tim kami langsung mulai proses pengerjaannya, dan {pic} akan update progresnya ke Kakak.\n\nSisa tagihan: {sisa}",
+TQLUNAS:"Terima kasih Kak {nama} 🙏\nPelunasan sebesar {pelunasan} untuk {layanan} sudah kami terima, pembayaran LUNAS ✅\n\nKwitansi kami lampirkan. Terima kasih sudah mempercayakan {brand} 😊",
+SELESAI:"Halo Kak {nama} 🎉\nKabar baik, pengurusan {layanan}{perusahaan_} sudah selesai!\n\nDokumennya siap kami serahkan. Mau dikirim ke alamat mana, atau Kakak ingin ambil langsung?\n\nTerima kasih sudah mempercayakan {brand} 🙏"});
+const TPL_EXTRA=[["INV","Kirim invoice"],["TAGIH","Ingatkan pelunasan"],["TQDP","Terima kasih DP"],["TQLUNAS","Terima kasih lunas"],["SELESAI","Berkas selesai"]];
+const TPL_KEYS=FU_LABELS.concat(TPL_EXTRA.map(x=>x[0])),tplName=k=>(TPL_EXTRA.find(x=>x[0]===k)||[k,k])[1];
 const waTpl=k=>((settings.waTpl||{})[k]||"").trim()||WA_TPL_DEF[k]||"";
 function waMsg(p,k){
   const b=(()=>{const x=p.invBrand||invBrandFor(brandOf(p));return x})();
-  return waTpl(k).replace(/\{nama\}/g,p.nama||"").replace(/\{layanan\}/g,(p.layanan||"layanan kami")+(p.paket&&!/^(Spam|Lainnya)$/.test(p.layanan)?" (Paket "+p.paket+")":"")).replace(/\{brand\}/g,b).replace(/\{pic\}/g,p.pic||(user&&user.name)||"").replace(/\{perusahaan\}/g,p.perusahaan||"");
+  let t=waTpl(k).replace(/\{nama\}/g,p.nama||"").replace(/\{layanan\}/g,(p.layanan||"layanan kami")+(p.paket&&!/^(Spam|Lainnya)$/.test(p.layanan)?" (Paket "+p.paket+")":"")).replace(/\{brand\}/g,b).replace(/\{pic\}/g,p.pic||(user&&user.name)||"").replace(/\{perusahaan_\}/g,p.perusahaan?" untuk "+p.perusahaan:"").replace(/\{perusahaan\}/g,p.perusahaan||"");
+  if(/\{(invoice|total|dp|pelunasan|sisa|jatuhtempo|rekening)\}/.test(t)){
+    // angka tagihan: untuk grup ikut invoice gabungan
+    const q=["INV","TAGIH"].includes(k)&&groupOf(p).length>1?groupInvoice(p):p,c=invCalc(q),R=n=>rp(n);
+    const due=q.invDue?new Date(q.invDue+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}):"-";
+    t=t.replace(/\{invoice\}/g,q.invNo||"(nomor menyusul)").replace(/\{total\}/g,R(c.total)).replace(/\{dp\}/g,R(c.dp)).replace(/\{pelunasan\}/g,R(c.lun)).replace(/\{sisa\}/g,c.sisa>0?R(c.sisa):"Rp0 (lunas)").replace(/\{jatuhtempo\}/g,due)
+      .replace(/\{rekening\}/g,c.bk.length?c.bk.map(x=>`${x.bank} ${x.norek} a.n. ${x.an||c.issuer}`).join("\n"):"(rekening menyusul)");
+  }
+  return t;
 }
 const waFuLink=(p,k)=>{const w=waLink(p.wa);return w&&k?w+"?text="+encodeURIComponent(waMsg(p,k)):w};
 function fuDoneMap(p){const m={};String(p.fuDone||"").split(";").forEach(x=>{const a=x.split("@");const k=(a[0]||"").trim();if(FU_LABELS.includes(k))m[k]=(a[1]||"").trim()||"1"});return m}
@@ -1282,7 +1343,7 @@ function setTopH(){const t=document.querySelector(".top");if(t)document.document
 window.addEventListener("resize",()=>{setTopH();if(user)applyRole()});
 // template WA di pengaturan
 let tplData={},tplCur="FU1";
-$("#tplSeg").innerHTML=FU_LABELS.map(k=>`<button type="button" data-tpl="${k}">${k}</button>`).join("");
+$("#tplSeg").innerHTML=TPL_KEYS.map(k=>`<button type="button" data-tpl="${k}">${esc(tplName(k))}</button>`).join("");
 function tplSave(){tplData[tplCur]=$("#tplText").value}
 function tplShow(k){tplCur=k;$("#tplText").value=(tplData[k]&&tplData[k].trim())?tplData[k]:WA_TPL_DEF[k];document.querySelectorAll("#tplSeg button").forEach(b=>b.classList.toggle("on",b.dataset.tpl===k));$("#tplNote").textContent=(tplData[k]&&tplData[k].trim()&&tplData[k].trim()!==WA_TPL_DEF[k])?"Template diubah":"Template bawaan"}
 $("#tplSeg").addEventListener("click",e=>{const b=e.target.closest("[data-tpl]");if(!b)return;tplSave();tplShow(b.dataset.tpl)});
@@ -1499,13 +1560,13 @@ function render(){
   const actv=B.filter(p=>["prospek","proses"].includes(phase(p)));
   const dpWait=actv.filter(p=>curStep(p)===0&&!hasDp(p)).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
   const overdue=actv.filter(p=>N(p.priceDeal)&&money(p).sisa>0&&p.invDue&&p.invDue<TODAY).sort((a,b)=>a.invDue.localeCompare(b.invDue));
-  const waB=(p,k,l)=>{const w=k?waFuLink(p,k):waLink(p.wa);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener">${l||"WA"}</a>`:""};
+  const waB=(p,k,l,def)=>{const w=k?waFuLink(p,k):waLink(p.wa);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener"${k?"":` data-wapick="${p.id}"${def?` data-wdef="${def}"`:""}`}>${l||"WA"}</a>`:""};
   const li=(p,mid,acts)=>`<li><div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${p.paket?" "+esc(p.paket):""}${isAdmin()?" · "+esc(p.pic||""):""}</span></div><div class="fu-mid">${mid}</div><span class="fu-act">${acts}</span></li>`;
   const none=t=>`<li class="empty">${t}</li>`;
   $("#tgIb").innerHTML=ib.length?ib.map(p=>`<li>${who(p)}<div class="fu-choice"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div></li>`).join(""):none("Tidak ada yang perlu dipilih.");
   $("#tgFu").innerHTML=due.length?due.map(p=>{const s=fuState(p),d=dd(s.date);return li(p,`<span class="fuc due">${esc(s.label)}</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}`,waB(p,s.label,"WA "+esc(s.label))+`<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button>`)}).join(""):none("Semua follow-up hari ini beres. Mantap!");
-  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${N(p.priceDeal)?`<small>Deal ${rpS(p.priceDeal)}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p)+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
-  $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p)+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
+  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${N(p.priceDeal)?`<small>Deal ${rpS(p.priceDeal)}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
+  $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p,"","WA","TAGIH")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
   [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
   const tgN=ib.length+due.length+dpWait.length+overdue.length;
   $("#tgBadge").textContent=$("#tgBadgeS").textContent=tgN?(tgN>99?"99+":tgN):"";
@@ -1538,7 +1599,7 @@ function render(){
   const sisaCell=p=>{if(!N(p.priceDeal))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
-  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
+  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
   const gp=p=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""};
   const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
     (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
@@ -1550,7 +1611,7 @@ function render(){
       <div class="amt num">${N(p.priceDeal)?`<b>${rpS(p.priceDeal)}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
     <div class="meta"><span class="pill">${esc(p.sumber||"–")} · ${esc(brandOf(p))}</span>${isAdmin()?`<span class="pill">${esc(p.pic||"–")}</span>`:""}${p.vo?`<span class="pill">VO ${esc(p.vo)}</span>`:""}${p.kota?`<span class="pill">${esc(p.kota)}</span>`:""}</div>
     ${isClient(p)?mini(p):tagHtml(p)}
-    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener">WhatsApp</a>`:""}</span></div></div>`};
+    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WhatsApp</a>`:""}</span></div></div>`};
   const emptyCard=`<div class="empty">${items.length?"Tidak ada data yang cocok dengan filter ini.":"Belum ada data. Ketuk + untuk menambah prospek."}</div>`;
   // ---- halaman (10/20/50/100 per halaman), bisa digeser ke samping ----
   const per=+$("#pgSize").value||10;
@@ -1582,6 +1643,7 @@ $("#resetF").onclick=()=>{$("#q").value="";["#fBrand","#fSumber","#fPic","#fLaya
 $("#clearStep").onclick=()=>{stepFilter=null;render()};
 let busy=new Set();
 document.addEventListener("click",async e=>{
+  const wp=e.target.closest("[data-wapick]");if(wp){e.preventDefault();openWaPick(wp.dataset.wapick,wp.dataset.wdef);return}
   if(e.target.closest("a"))return;
   const sc=e.target.closest("[data-step]");if(sc){const i=Number(sc.dataset.step);stepFilter=stepFilter===i?null:i;if(stepFilter!==null)tab="semua";render();if(stepFilter!==null)setView("list");return}
   const lb=e.target.closest("[data-label]");if(lb){labelFilter=labelFilter===lb.dataset.label?"":lb.dataset.label;render();if(labelFilter)setView("list");return}
@@ -1828,7 +1890,7 @@ function invFormFill(d,p){
   syncItems();
   renderRek(rekOf(d));
   $("#invFromForm").hidden=!p;
-  newOldTouched=false;$("#dupHint").textContent="";if(!p)autoNewOld();
+  newOldTouched=false;dupKey="";dupRemote=[];$("#dupHint").textContent="";$("#dupHint").classList.remove("dup-box");if(!p)autoNewOld();
   updSaveLabel();
 }
 function updSaveLabel(){
@@ -1846,9 +1908,31 @@ function findReturning(){
   return items.find(p=>p.id!==editingId&&((wa&&waKey(p.wa)===wa)||(nm&&co&&norm(p.nama)===nm&&norm(p.perusahaan)===co)))||null;
 }
 function setNewOld(v){document.querySelectorAll('#statusChips input[name="stat"]').forEach(c=>{if(NEWOLD.includes(c.value))c.checked=c.value===v});updSaveLabel()}
+// ---------- peringatan nomor WA dobel (cek data sendiri + data PIC lain di server) ----------
+const PH_LBL={prospek:"Prospek",proses:"Klien, sedang dikerjakan",selesai:"Klien, selesai",lose:"Lose",spam:"Spam",delete:"Delete"};
+const fmtDY=s=>s?new Date(String(s).slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"";
+let dupRemote=[],dupKey="",dupT=null;
+function dupCtx(){const cur=editingId?items.find(x=>x.id===editingId):null;return {id:editingId||"",grup:cur&&cur.grup||""}}
+function dupLocal(key){const c=dupCtx();return key?items.filter(p=>p.id!==c.id&&!(c.grup&&p.grup===c.grup)&&waKey(p.wa)===key):[]}
+function paintDup(){
+  const f=$("#frm").elements,key=waKey(f.wa.value),loc=dupLocal(key);
+  const rows=loc.map(p=>({pic:p.pic,created:p.created,layanan:p.layanan,ph:phase(p),nama:p.nama,mine:true}))
+    .concat(key===dupKey?dupRemote.filter(r=>!r.mine&&!loc.some(p=>p.pic===r.pic&&p.created===r.created&&p.layanan===r.layanan)).map(r=>({pic:r.pic,created:r.created,layanan:r.layanan,ph:phase({statuses:r.statuses||[],created:r.created})})):[]);
+  const h=$("#dupHint");
+  if(!rows.length){const hit=findReturning();h.innerHTML=hit?esc(`Pernah tercatat: ${hit.nama}${hit.created?" ("+fmtD(hit.created)+")":""}, otomatis Prospek Lama`):"";h.classList.remove("dup-box");return}
+  const other=rows.some(r=>norm(r.pic)!==norm(user&&user.name));
+  h.classList.add("dup-box");
+  h.innerHTML=`<b>⚠️ Nomor ini sudah tercatat${other?" (dipegang PIC lain)":""}</b>`+rows.slice(0,4).map(r=>`<span>${r.nama?esc(r.nama)+" · ":""}PIC <b>${esc(r.pic||"–")}</b> · ${esc(fmtDY(r.created)||"–")}${r.layanan?" · "+esc(r.layanan):""} · ${esc(PH_LBL[r.ph]||"")}</span>`).join("")+(rows.length>4?`<span>+${rows.length-4} lainnya</span>`:"")+`<small>Tetap bisa disimpan. Pastikan bukan lead yang sama${other?", koordinasikan dengan PIC-nya":""}.${editingId?"":" Status otomatis Prospek Lama."}</small>`;
+}
+function dupRemoteCheck(){
+  clearTimeout(dupT);const key=waKey($("#frm").elements.wa.value);
+  if(!key){dupKey="";dupRemote=[];return}
+  if(key===dupKey||isAdmin()||!API||!token||!navigator.onLine)return;
+  dupT=setTimeout(async()=>{const c=dupCtx();try{const r=await call("checkWa",{wa:key,id:c.id,grup:c.grup});if(waKey($("#frm").elements.wa.value)!==key)return;dupKey=key;dupRemote=Array.isArray(r)?r:[];paintDup()}catch(e){}},500);
+}
 function autoNewOld(){
   const hit=findReturning();
-  $("#dupHint").textContent=hit?`Pernah tercatat: ${hit.nama}${hit.created?" ("+fmtD(hit.created)+")":""}, otomatis Prospek Lama`:"";
+  paintDup();dupRemoteCheck();
   if(editingId||newOldTouched)return;
   setNewOld(hit?"Prospek Lama":"Prospek Baru");
 }
@@ -1874,17 +1958,22 @@ function invFormRead(){
 }
 $("#invFromForm").onclick=()=>{showInvAfter=true;if(frm.requestSubmit)frm.requestSubmit();else frm.dispatchEvent(new Event("submit",{cancelable:true}))};
 // render
-function invHTML(p){
+// angka-angka invoice (dipakai invoice, kwitansi & template WA)
+function invCalc(p){
   const b=invProfile(p.invBrand||invBrandFor(brandOf(p)));
   let its=parseItems(p);if(!its.length&&N(p.priceDeal))its=[{d:layananDesc(p.layanan,p.paket)||"Layanan",q:1,h:N(p.priceDeal)}];
   const sub=its.reduce((a,x)=>a+(N(x.q)||1)*N(x.h),0)||N(p.priceDeal);
   const disk=N(p.diskon),pph=N(p.pph),dp=N(p.dp),lun=N(p.lunas),ppn=p._ppn!=null?p._ppn:ppnOn(p)?Math.round(Math.max(0,sub-disk)*PPN_RATE):0,total=sub-disk+ppn,paid=dp+lun,sisa=Math.max(0,total-paid-pph);
-  // Sewa Virtual Office: tanpa logo. Kalau logo dipakai, nama brand tidak ditulis lagi.
-  const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
-  const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
   // rekening yang dipilih; penerbit invoice = atas nama rekening pertama (mis. CV. Mitra Konsultasi)
   const pick=rekOf(p),all=allRekening(),bk=pick.length?all.filter(x=>pick.includes(x.key)):banksOf(b);
   const issuer=(bk[0]&&bk[0].an)||b.legal||b.brand;
+  return {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer};
+}
+function invHTML(p){
+  const {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer}=invCalc(p);
+  // Sewa Virtual Office: tanpa logo. Kalau logo dipakai, nama brand tidak ditulis lagi.
+  const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
+  const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
   const terms=isPaid?"Lunas":paid?"2/2":"1/2";
   const fd=s=>s?new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"–";
   const fds=s=>new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
@@ -1923,6 +2012,46 @@ function invHTML(p){
   ${b.footer?`<div class="iv-note">${br(b.footer)}</div>`:""}
 </div>`;
 }
+// ---------- kwitansi (bukti terima DP / pelunasan) ----------
+const kwNo=(p,mode)=>p.invNo?"KW/"+p.invNo+"/"+(mode==="dp"?"DP":"L"):"";
+function kwHTML(p,mode){
+  const {b,its,total,dp,lun,pph,sisa,bk,issuer}=invCalc(p);
+  const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
+  const isDp=mode==="dp",amt=isDp?dp:lun,tgl=(isDp?p.tglDp:p.tglLunas)||TODAY;
+  const before=isDp?0:dp,after=isDp?Math.max(0,total-dp):sisa;
+  const R=n=>"Rp "+Math.round(N(n)).toLocaleString("id-ID");
+  const fdi=s=>new Date(String(s).slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"});
+  const desc=its.map(x=>x.d).filter(Boolean);
+  const untuk=(isDp?"Uang muka (DP) ":"Pelunasan ")+(desc.length?desc.slice(0,3).join(", ")+(desc.length>3?` dan ${desc.length-3} item lainnya`:""):"layanan")+(p.invNo?` sesuai invoice ${p.invNo}`:"");
+  const br=t=>esc(t).replace(/\n/g,"<br>");
+  const row=(l,v)=>`<div class="kw-row"><span>${l}</span><div>${v}</div></div>`;
+  const no=kwNo(p,mode);
+  return `<div class="inv iv kw" style="--acc:${esc(b.warna||"#14213D")}">
+  <div class="iv-head">
+    <div class="iv-logo">${useLogo?`<img src="${b.logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
+    <div class="iv-title"><h1>KWITANSI</h1><div class="iv-no"># ${no?esc(no):`<span class="muted">menunggu nomor invoice</span>`}</div></div>
+  </div>
+  <div class="kw-from"><b>${esc(issuer)}</b>${b.alamat?`<div>${br(b.alamat)}</div>`:""}${[b.telp,b.email,b.web].filter(Boolean).length?`<div>${[b.telp,b.email,b.web].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>
+  <div class="kw-body">
+    ${row("Telah terima dari",`<b>${esc(p.perusahaan||p.nama)}</b>${p.perusahaan&&p.nama?` <span class="kw-up">u.p. ${esc(p.nama)}</span>`:""}`)}
+    ${row("Uang sejumlah",`<div class="kw-amt">${R(amt)}</div><div class="kw-say">${terbilang(amt)}</div>`)}
+    ${row("Untuk pembayaran",esc(untuk))}
+    ${row("Tanggal bayar",esc(fdi(tgl)))}
+    ${bk.length?row("Ditransfer ke",bk.slice(0,1).map(x=>`${esc(x.bank)} ${esc(x.norek)} a.n. ${esc(x.an||issuer)}`).join("")):""}
+  </div>
+  <div class="kw-foot">
+    <div class="kw-sum">
+      <div class="iv-r"><span>Total tagihan</span><b>${R(total)}</b></div>
+      ${before?`<div class="iv-r"><span>Sudah dibayar sebelumnya (DP)</span><b>${R(before)}</b></div>`:""}
+      <div class="iv-r"><span>Pembayaran ini</span><b>${R(amt)}</b></div>
+      ${!isDp&&pph?`<div class="iv-r"><span>PPh dipotong</span><b>${R(pph)}</b></div>`:""}
+      <div class="iv-r bal"><span>Sisa tagihan</span><b>${after>0?R(after):"LUNAS"}</b></div>
+    </div>
+    <div class="iv-sign kw-sign"><div>${esc(fdi(tgl))}</div><div class="kw-stamp">${!isDp&&after<=0?"LUNAS":"DITERIMA"}</div><div class="sp"></div><b>${esc(b.sign||issuer)}</b><div>${esc(b.signTitle||issuer)}</div></div>
+  </div>
+  ${b.footer?`<div class="iv-note">${br(b.footer)}</div>`:""}
+</div>`;
+}
 function fitInv(){
   if(!$("#invDlg").open)return;
   const body=$("#invBody"),sc=$("#invScale"),doc=$("#invDoc");
@@ -1940,15 +2069,24 @@ function groupInvoice(p){
     perusahaan:lead.perusahaan+(g.length>1?` (+${g.length-1} PT)`:""),statuses:tags(lead),invNo:lead.invNo});
 }
 function invTarget(p){return invCombine&&groupOf(p).length>1?groupInvoice(p):p}
+// dokumen di dialog: invoice / kwitansi DP / kwitansi pelunasan
+let invMode="inv",shareReady=null;
+const docHTML=t=>invMode==="inv"?invHTML(t):kwHTML(t,invMode);
+const docTpl=()=>invMode==="dp"?"TQDP":invMode==="lunas"?"TQLUNAS":"INV";
 function paintInv(p){
   const multi=groupOf(p).length>1;$("#invGrpWrap").hidden=!multi;$("#invGrp").checked=invCombine;
-  p=invTarget(p);
-  $("#invDoc").innerHTML=invHTML(p);
+  p=invTarget(p);shareReady=null;$("#invShare").textContent="Kirim ke WA";
+  const hasD=N(p.dp)>0,hasL=N(p.lunas)>0;
+  if((invMode==="dp"&&!hasD)||(invMode==="lunas"&&!hasL))invMode="inv";
+  $("#invMode").hidden=!hasD&&!hasL;
+  document.querySelectorAll("#invMode [data-im]").forEach(x=>{x.hidden=(x.dataset.im==="dp"&&!hasD)||(x.dataset.im==="lunas"&&!hasL);x.classList.toggle("on",x.dataset.im===invMode)});
+  $("#invTtl").textContent=invMode==="inv"?"Invoice":"Kwitansi";
+  $("#invDoc").innerHTML=docHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
   fitInv();
 }
-function openInvoice(id){const p=items.find(x=>x.id===id);if(!p)return;invId=id;if(!$("#invDlg").open)$("#invDlg").showModal();paintInv(p);requestAnimationFrame(fitInv);loadPdfLib().catch(()=>{})}
+function openInvoice(id,mode){const p=items.find(x=>x.id===id);if(!p)return;invId=id;invMode=mode||"inv";if(!$("#invDlg").open)$("#invDlg").showModal();paintInv(p);requestAnimationFrame(fitInv);loadPdfLib().catch(()=>{})}
 function refreshInvoice(){if(!invId||!$("#invDlg").open)return;const p=items.find(x=>x.id===invId);if(p)paintInv(p);else $("#invDlg").close()}
 window.addEventListener("resize",fitInv);
 let pdfLib=null;
@@ -1957,23 +2095,48 @@ function loadPdfLib(){
   pdfLib=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";sc.onload=()=>res();sc.onerror=()=>{pdfLib=null;sc.remove();rej(new Error("PDFLIB"))};document.head.appendChild(sc)});
   return pdfLib;
 }
-const invFile=p=>((p.invNo||("invoice "+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
+const invFile=p=>(((invMode==="inv"?p.invNo:kwNo(p,invMode))||((invMode==="inv"?"invoice ":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
 function printInv(){
   const p=items.find(x=>x.id===invId);if(!p)return;
-  $("#printArea").innerHTML=invHTML(invTarget(p));document.body.classList.add("printing");
+  $("#printArea").innerHTML=docHTML(invTarget(p));document.body.classList.add("printing");
   setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove("printing"),800)},80);
 }
 $("#invPrint").onclick=printInv;
 $("#invGrp").addEventListener("change",e=>{invCombine=e.target.checked;refreshInvoice()});
 $("#invEdit").onclick=()=>{const id=invId;$("#invDlg").close();openForm(id)};
+async function pdfWorker(p){
+  await loadPdfLib();
+  const area=$("#printArea");area.innerHTML=docHTML(invTarget(p));
+  await Promise.all([...area.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+  return window.html2pdf().set({margin:0,filename:invFile(invTarget(p)),image:{type:"jpeg",quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",windowWidth:794},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(area.firstElementChild);
+}
+$("#invMode").addEventListener("click",e=>{const b=e.target.closest("[data-im]");if(!b)return;invMode=b.dataset.im;refreshInvoice()});
+// kirim ke WhatsApp: di HP lewat menu Bagikan (PDF langsung terlampir); di laptop PDF diunduh + chat WA dibuka
+const canShareFiles=()=>{try{return !!(navigator.canShare&&navigator.share&&window.matchMedia("(pointer:coarse)").matches&&navigator.canShare({files:[new File(["x"],"x.pdf",{type:"application/pdf"})]}))}catch(e){return false}};
+async function shareFile(file,msg){
+  try{await navigator.share({files:[file],text:msg});toast("Pilih WhatsApp lalu kontak kliennya")}
+  catch(e){if(e&&e.name==="AbortError")return;if(e&&e.name==="NotAllowedError"){shareReady={id:invId,mode:invMode,file};$("#invShare").textContent="PDF siap · Ketuk kirim";return}toast("Gagal membagikan. Pakai Download PDF.")}
+}
+$("#invShare").onclick=async()=>{
+  const p=items.find(x=>x.id===invId);if(!p)return;const t=invTarget(p),msg=waMsg(t,docTpl()),w=waLink(p.wa),b=$("#invShare");
+  try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(e){}
+  if(shareReady&&shareReady.id===invId&&shareReady.mode===invMode){const f=shareReady.file;shareReady=null;b.textContent="Kirim ke WA";return shareFile(f,msg)}
+  const mobile=canShareFiles();
+  // laptop: buka chat WA sekarang (sebelum proses PDF, supaya tidak diblokir browser)
+  if(!mobile&&w)window.open(w+"?text="+encodeURIComponent(msg),"_blank","noopener");
+  b.disabled=true;b.textContent="Menyiapkan PDF…";
+  try{
+    const wk=await pdfWorker(p);
+    if(mobile){const blob=await wk.outputPdf("blob");b.disabled=false;b.textContent="Kirim ke WA";await shareFile(new File([blob],invFile(t),{type:"application/pdf"}),msg)}
+    else{await wk.save();toast(w?"PDF diunduh. Tarik file PDF-nya ke chat WhatsApp yang terbuka.":"PDF diunduh. Nomor WA klien belum diisi.")}
+  }catch(e){toast(navigator.onLine?"Gagal membuat PDF, pakai Cetak → Simpan sebagai PDF":"Butuh internet sekali untuk fitur PDF.")}
+  finally{b.disabled=false;if(!shareReady)b.textContent="Kirim ke WA"}
+};
 $("#invPdf").onclick=async()=>{
   const p=items.find(x=>x.id===invId);if(!p)return;const b=$("#invPdf");b.disabled=true;b.textContent="Menyiapkan PDF…";
   try{
-    await loadPdfLib();
-    const area=$("#printArea");area.innerHTML=invHTML(invTarget(p));
-    await Promise.all([...area.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
-    await window.html2pdf().set({margin:0,filename:invFile(p),image:{type:"jpeg",quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",windowWidth:794},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(area.firstElementChild).save();
+    await (await pdfWorker(p)).save();
     toast("PDF diunduh");
   }catch(e){toast(navigator.onLine?"Gagal membuat PDF, pakai Cetak → Simpan sebagai PDF":"Butuh internet sekali untuk fitur PDF. Pakai Cetak dulu.");printInv()}
   finally{b.disabled=false;b.textContent="Download PDF"}
@@ -2055,8 +2218,37 @@ $("#payFrm").addEventListener("submit",async e=>{
   else{np.lunas=N(p.lunas)+nom;np.tglLunas=f.tgl.value||TODAY;if(money(np).sisa<=0&&!st.includes("Lunas"))st.push("Lunas")}
   np.statuses=st;$("#payDlg").close();await persist(np);
   toast(payMode==="dp"?`${p.nama}: DP ${rp(nom)} dicatat`:money(np).sisa<=0?`${p.nama}: lunas ✓`:`${p.nama}: pembayaran ${rp(nom)} dicatat`);
-  if(payMode==="dp")openInvoice(p.id);
+  openInvoice(p.id,payMode==="dp"?"dp":"lunas");
 });
+// ---------- kirim WhatsApp dengan template ----------
+let waPickId=null;
+function waDefault(p){
+  const s=fuState(p);if(fuDue(s))return s.label;
+  const ph=phase(p),m=money(p);
+  if(ph==="selesai"||has(p,"Serah Terima"))return "SELESAI";
+  if(N(p.lunas)>0&&N(p.priceDeal)&&m.sisa<=0)return "TQLUNAS";
+  if(hasDp(p)&&N(p.priceDeal)&&m.sisa>0)return "TAGIH";
+  if(invStage(p))return "INV";
+  return s.active&&s.label?s.label:"";
+}
+function waPaint(k){
+  const p=items.find(x=>x.id===waPickId);if(!p)return;
+  document.querySelectorAll("#waSeg [data-wk]").forEach(b=>b.classList.toggle("on",b.dataset.wk===k));
+  $("#waText").value=k?waMsg(p,k):"";waHref();
+}
+function waHref(){const p=items.find(x=>x.id===waPickId);const w=p?waLink(p.wa):"",t=$("#waText").value.trim();$("#waGo").href=w?(t?w+"?text="+encodeURIComponent(t):w):"#"}
+function openWaPick(id,def){
+  const p=items.find(x=>x.id===id);if(!p)return;waPickId=id;
+  const s=fuState(p),keys=[];if(s.active&&s.label)keys.push(s.label);
+  TPL_EXTRA.forEach(x=>keys.push(x[0]));
+  $("#waTtl").textContent="WhatsApp · "+p.nama;
+  $("#waSeg").innerHTML=keys.map(k=>`<button type="button" data-wk="${k}">${esc(FU_LABELS.includes(k)?k:tplName(k))}</button>`).join("")+`<button type="button" data-wk="">Chat kosong</button>`;
+  $("#waDlg").showModal();waPaint(def&&keys.includes(def)?def:waDefault(p));
+}
+$("#waSeg").addEventListener("click",e=>{const b=e.target.closest("[data-wk]");if(b)waPaint(b.dataset.wk)});
+$("#waText").addEventListener("input",waHref);
+$("#waGo").addEventListener("click",()=>setTimeout(()=>$("#waDlg").close(),300));
+$("#waCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#waText").value);toast("Pesan disalin")}catch(e){$("#waText").select();toast("Tekan lama lalu salin")}};
 // ---------- input cepat ----------
 let quickMode=ls.get("pm_quick",true);
 function setQuick(q){quickMode=q;$("#frm").classList.toggle("quick",q&&!editingId);$("#qToggle").textContent=q?"Isi lengkap":"Mode cepat";$("#qNote").hidden=!(q&&!editingId);ls.set("pm_quick",q)}

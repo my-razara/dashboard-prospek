@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali file aplikasi di-update.
-const CACHE = "prospek-v35";
+const CACHE = "prospek-v36";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png"];
 const FONT_CACHE = "prospek-fonts";

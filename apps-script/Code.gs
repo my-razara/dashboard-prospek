@@ -107,6 +107,7 @@ function route_(q) {
     case 'getAll': return getAll(q.token);
     case 'batch': return batch(q.token, q.ops);
     case 'saveSettings': return saveSettings(q.token, q.settings);
+    case 'checkWa': return checkWa(q.token, q.wa, q.id, q.grup);
   }
   throw new Error('UNKNOWN');
 }
@@ -237,6 +238,19 @@ function deleteRecord(token, id) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Cek nomor WA dobel di SEMUA data (termasuk milik PIC lain).
+// Yang dikirim balik hanya nama PIC, tanggal, layanan & status, bukan data klien.
+function checkWa(token, wa, id, grup) {
+  const u = auth_(token);
+  const key = waKey_(wa);
+  if (!key) return [];
+  return readAll_(ss_())
+    .filter(o => waKey_(o.wa) === key && o.id !== String(id || '') && !(grup && o.grup === grup))
+    .sort((a, b) => String(b.created).localeCompare(String(a.created)))
+    .slice(0, 5)
+    .map(o => ({ pic: o.pic, created: o.created, layanan: o.layanan, statuses: o.statuses, mine: norm_(o.pic) === norm_(u.name) }));
 }
 
 function saveSettings(token, s) {
