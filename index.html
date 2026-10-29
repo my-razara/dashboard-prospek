@@ -977,7 +977,9 @@ const KAT={Pendirian:BADAN.map(b=>"Pendirian "+b),Perubahan:BADAN.map(b=>"Peruba
   Lainnya:["Sewa Virtual Office","Konsultan Pajak/Keuangan","Laporan RUPS Tahunan","NPWP","NIB","PKP","Rekening Bank","Spam","Lainnya"]};
 const LAYANAN=[...KAT.Pendirian,...KAT.Perubahan,...KAT.Lainnya];
 const katOf=l=>Object.keys(KAT).find(k=>KAT[k].includes(l))||"Lainnya";
-const PAKET_PT=["PTO","PIO","PIP","PIV","PTL","PTV"],PAKET_CV=["CTO","CIO","CIP","CIV","CTL","CTV"],PAKET_VO=["Basic","Silver"];
+// kode paket lama yang sudah diganti namanya
+const PAKET_ALIAS={CTL:"CVL",CTV:"CVV"};
+const PAKET_PT=["PTO","PIO","PIP","PIV","PTL","PTV"],PAKET_CV=["CTO","CIO","CIP","CIV","CVL","CVV"],PAKET_VO=["Basic","Silver"];
 const paketFor=l=>!l||l==="Spam"?null:["Pendirian PT PMDN","Pendirian PT PMA","Pendirian PT Perorangan"].includes(l)?PAKET_PT:l==="Pendirian CV"?PAKET_CV:l==="Sewa Virtual Office"?PAKET_VO:"manual";
 const DEFAULT_SET={
   sumber:[{n:"ads-lopo",b:"Vorent"},{n:"vorepeat",b:"Vorent"},{n:"ads-gusti",b:"izinin"},{n:"repeat",b:"izinin"},{n:"ads-echo",b:"Echoffice"},{n:"corepeat",b:"Echoffice"}],
@@ -1592,7 +1594,7 @@ function setKat(k,val){kat=k;document.querySelectorAll("#katSeg button").forEach
   F.layanan.value=val||"";}
 document.querySelectorAll("#katSeg button").forEach(b=>b.onclick=()=>{setKat(b.dataset.kat,"");updPaket("");F.layanan.focus()});
 function updPaket(keep){const a=paketFor(F.layanan.value);$("#paketWrap").style.display=a?"":"none";
-  const v=keep??(Array.isArray(a)?F.paket.value:F.paketManual.value);
+  let v=keep??(Array.isArray(a)?F.paket.value:F.paketManual.value);if(Array.isArray(a)&&PAKET_ALIAS[v]&&a.includes(PAKET_ALIAS[v]))v=PAKET_ALIAS[v];
   F.paket.style.display=Array.isArray(a)?"":"none";$("#paketRq").hidden=!Array.isArray(a);F.paketManual.style.display=a==="manual"?"":"none";
   if(Array.isArray(a)){opts(F.paket,a,"Pilih paket");F.paket.value=a.includes(v)?v:"";F.paketManual.value=""}
   else if(a==="manual"){F.paketManual.value=v||"";F.paket.value=""}
