@@ -20,7 +20,7 @@ const FIELDS = [
   ['no', 'No'], ['created', 'Tanggal Masuk'], ['sumber', 'Sumber'], ['perusahaan', 'Perusahaan'],
   ['vo', 'VO Partner'], ['kota', 'Kab/Kota'], ['brand', 'Brand'], ['paket', 'Paket'], ['statuses', 'Status'],
   ['pic', 'PIC'], ['bulanNo', 'Bulan'], ['bulanTxt', 'Bulan (Teks)'], ['tahun', 'Tahun'],
-  ['priceDeal', 'Price Deal'], ['dp', 'Nominal DP'], ['lunas', 'Nominal Pelunasan'], ['keterangan', 'Keterangan'],
+  ['priceDeal', 'Price Deal'], ['dp', 'Nominal DP'], ['lunas', 'Nominal Pelunasan'], ['keterangan', 'Keterangan'], ['grup', 'Grup'],
   ['nama', 'Nama'], ['wa', 'WhatsApp'], ['layanan', 'Layanan'], ['tahap', 'Tahap Terakhir'], ['sisa', 'Sisa Tagihan'],
   ['diskon', 'Diskon'], ['ppn', 'PPN 11%'], ['pph', 'Potong PPh'], ['retur', 'Return'],
   ['tglDp', 'Tanggal DP'], ['tglLunas', 'Tanggal Pelunasan'], ['selesai', 'Tanggal Serah Terima'],
@@ -179,7 +179,7 @@ function batch(token, ops) {
         }
         // data baru berlabel "Prospek Baru" tapi nomor WA-nya sudah pernah tercatat -> jadi "Prospek Lama"
         let stOut = null;
-        if (!hit && Array.isArray(o.statuses) && o.statuses.indexOf('Prospek Baru') >= 0 && waKey_(o.wa)) {
+        if (!hit && !(o.grup && o.grup !== o.id) && Array.isArray(o.statuses) && o.statuses.indexOf('Prospek Baru') >= 0 && waKey_(o.wa)) {
           if (!waSet) waSet = waSet_(sh);
           if (waSet[waKey_(o.wa)]) { o.statuses = o.statuses.map(x => x === 'Prospek Baru' ? 'Prospek Lama' : x); stOut = o.statuses; }
         }

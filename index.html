@@ -232,6 +232,15 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 .fuch select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--ink)}
 @media (max-width:575px){.fugrid{grid-template-columns:repeat(2,1fr)}}
 #frm [name="sumberLain"]{margin-top:8px}
+#ptOneWrap.mhide{display:none!important}
+.multi{border:1px dashed var(--line);border-radius:12px;padding:10px 12px}
+.mchk{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;font-weight:700;color:var(--ink)!important;cursor:pointer}
+.mchk input{width:18px;height:18px}
+#multiBox{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+#multiBox[hidden]{display:none}
+#multiBox textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--ink);width:100%;resize:vertical}
+.gpill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--step-soft);color:var(--accent-ink);border:0;cursor:pointer;white-space:nowrap}
+.inv-grp{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .dup-hint{color:var(--warn-ink);font-weight:600}
 .req-note{margin:14px 0 0;font-size:13px;color:var(--ink-2)}
 .st.wk{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
@@ -816,7 +825,14 @@ dialog .mb{overflow-x:hidden}
       <div class="sec"><h4>Data prospek</h4>
         <div class="form">
           <label><span class="lt">Nama kontak <span class="rq" aria-hidden="true">*</span></span><input name="nama" autocomplete="off" aria-required="true"></label>
-          <label class="qh">Perusahaan / calon PT<input name="perusahaan" autocomplete="off"></label>
+          <label class="qh" id="ptOneWrap">Perusahaan / calon PT<input name="perusahaan" autocomplete="off"></label>
+          <div class="full multi" id="multiWrap">
+            <label class="mchk"><input type="checkbox" id="multiOn"> Order lebih dari 1 PT</label>
+            <div id="multiBox" hidden>
+              <label>Daftar nama PT <span class="hint">(satu nama per baris)</span><textarea name="ptList" rows="5" placeholder="PT Maju Jaya&#10;PT Sinar Abadi&#10;PT Karya Bersama"></textarea></label>
+              <p class="hint" id="multiInfo">Tiap PT dibuat jadi data sendiri dengan kontak, sumber, layanan & paket yang sama. Follow-up cukup sekali untuk satu grup.</p>
+            </div>
+          </div>
           <label>No. WhatsApp<input name="wa" inputmode="tel" placeholder="0812…" autocomplete="off"><span class="hint dup-hint" id="dupHint"></span></label>
           <label><span class="lt">Sumber iklan <span class="rq" aria-hidden="true">*</span></span><select name="sumber" aria-required="true"></select><input name="sumberLain" placeholder="Ketik sumber, mis. TikTok, Pameran, Teman" autocomplete="off" hidden><span class="hint" id="brandHint"></span></label>
           <label><span class="lt">PIC <span class="rq" aria-hidden="true">*</span></span><select name="pic" aria-required="true"></select></label>
@@ -937,6 +953,7 @@ dialog .mb{overflow-x:hidden}
     <button class="btn sm primary" type="button" id="invPdf">Download PDF</button>
     </div></div>
   <div class="inote" id="invNote" hidden></div>
+  <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
 </dialog>
 <div id="printArea" aria-hidden="true"></div>
@@ -1061,7 +1078,12 @@ function fuSeq(p,done){
   if(done.FU4){if(ch==="dp"){seq=seq.concat(FU_DP);if(done.FU6)seq=seq.concat(FU_PRM)}else if(ch==="promo")seq=seq.concat(FU_PRM)}
   return {seq,ch};
 }
+// ---------- grup (1 klien order banyak PT) ----------
+const isMember=p=>!!p.grup&&p.grup!==p.id;
+const groupOf=p=>p&&p.grup?items.filter(x=>x.grup===p.grup):p?[p]:[];
+const leadKey=p=>p.grup||p.id;
 function fuState(p){
+  if(isMember(p))return {active:false};
   const ph=phase(p);
   if(["lose","spam","delete","selesai"].includes(ph)||has(p,"Klien")||curStep(p)>=1||!p.created)return {active:false};
   const done=fuDoneMap(p),{seq,ch}=fuSeq(p,done);
@@ -1095,6 +1117,7 @@ function markFu(id){
   const np=Object.assign({},p,{fuDone:fuDoneStr(m),updated:TODAY});delete np.status;
   if(s.label==="PRM2"){np.statuses=[...new Set(tags(p).concat(["Delete"]))]}
   persist(np);
+  if(s.label==="PRM2")groupOf(p).filter(x=>x.id!==p.id&&["prospek"].includes(phase(x))).forEach(x=>{const m=Object.assign({},x,{statuses:[...new Set(tags(x).concat(["Delete"]))],updated:TODAY});delete m.status;persist(m)});
   toast(s.label==="PRM2"?`${p.nama}: PRM2 selesai, dipindah ke Delete`:s.label==="FU4"&&!s.choice?`${p.nama}: FU4 selesai, cek Inbox`:`${p.nama}: ${s.label} selesai`);
 }
 function chooseFu(id,ch){
@@ -1102,6 +1125,7 @@ function chooseFu(id,ch){
   const np=Object.assign({},p,{fuChoice:ch,updated:TODAY});delete np.status;
   if(ch==="dp")np.statuses=[...new Set(tags(p).concat(["Waiting DP"]))];
   persist(np);
+  if(ch==="dp")groupOf(p).filter(x=>x.id!==p.id&&!has(x,"Waiting DP")).forEach(x=>{const m=Object.assign({},x,{statuses:[...new Set(tags(x).concat(["Waiting DP"]))],updated:TODAY});delete m.status;persist(m)});
   toast(ch==="dp"?`${p.nama}: Waiting DP, lanjut FU5 & FU6`:`Saran promosi 1: ${promoText()}`);
 }
 
@@ -1377,7 +1401,7 @@ function base(){
     if(st&&!has(p,st))return false;
     if(labelFilter&&!labelOk(p,labelFilter))return false;
     if(!periodOk(p))return false;
-    if(q){const h=[p.nama,p.perusahaan,p.wa,p.vo,p.catatan,p.keterangan,p.paket,p.sumber,p.kota,p.layanan,p.invNo,p.email].join(" ").toLowerCase();if(!h.includes(q))return false}
+    if(q){const h=[p.nama,p.perusahaan,p.wa,p.vo,p.catatan,p.keterangan,p.paket,p.sumber,p.kota,p.layanan,p.invNo,p.email,p.grup].join(" ").toLowerCase();if(!h.includes(q))return false}
     return true;
   });
 }
@@ -1438,7 +1462,7 @@ function render(){
   const FS=B.map(p=>[p,fuState(p)]);const late=FS.filter(([p,s])=>fuDue(s)).length,missedN=FS.filter(([p,s])=>s.active&&s.missed&&s.missed.length).length,inboxN=FS.filter(([p,s])=>s.inbox).length;
   const cl=B.filter(isClient).length,lo=B.filter(p=>phase(p)==="lose").length;
   $("#kpis").innerHTML=`
-    <div class="kpi"><div class="l">Prospek aktif</div><div class="n num">${pros.length}</div><div class="h">closing ${cl+lo?Math.round(cl/(cl+lo)*100):0}% (${cl} klien, ${lo} lose)</div></div>
+    <div class="kpi"><div class="l">Prospek aktif</div><div class="n num">${pros.length}</div><div class="h">${new Set(B.map(leadKey)).size} lead dari ${B.length} PT · closing ${cl+lo?Math.round(cl/(cl+lo)*100):0}% (${cl} klien, ${lo} lose)</div></div>
     <div class="kpi"><div class="l">Dalam pengerjaan</div><div class="n num">${proc.length}</div><div class="h">${proc.filter(p=>curStep(p)===0).length} waiting DP · ${proc.filter(p=>has(p,"Waiting Lunas")&&!has(p,"Lunas")).length} menunggu lunas</div></div>
     <div class="kpi"><div class="l">Serah terima bulan ini</div><div class="n num">${doneMonth}</div><div class="h">total selesai: ${B.filter(p=>phase(p)==="selesai").length}</div></div>
     <div class="kpi ${late?"warn":""}"><div class="l">Follow-up belum dikerjakan</div><div class="n num">${late}</div><div class="h">${inboxN} di inbox · ${missedN} ada FU terlewat</div></div>`;
@@ -1515,13 +1539,14 @@ function render(){
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
   const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
-  const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
+  const gp=p=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""};
+  const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
     (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
          :`<td>${tagHtml(p)}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td><td class="num">${fmtD(p.created)}<div class="co">${esc(mingguOf(p))} · ${esc(ymShort(bulanOf(p)))}</div></td>`)+
     `<td>${act(p)}</td></tr>`;
   const emptyRow=`<tr><td colspan="${cols.length}" class="empty" style="text-align:center">${items.length?"Tidak ada data yang cocok dengan filter ini.":"Belum ada data tercatat."}</td></tr>`;
   const cardHTML=p=>{const w=waLink(p.wa);return `<div class="mc" data-edit="${p.id}" role="button" tabindex="0" aria-label="Buka ${esc(p.nama)}">
-    <div class="r1"><div class="mn"><div class="nm">${esc(p.nama)}</div><div class="co">${esc(p.layanan||"–")}${p.paket?" · "+esc(p.paket):""}${p.perusahaan?" · "+esc(p.perusahaan):""}</div></div>
+    <div class="r1"><div class="mn"><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc(p.layanan||"–")}${p.paket?" · "+esc(p.paket):""}${p.perusahaan?" · "+esc(p.perusahaan):""}</div></div>
       <div class="amt num">${N(p.priceDeal)?`<b>${rpS(p.priceDeal)}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
     <div class="meta"><span class="pill">${esc(p.sumber||"–")} · ${esc(brandOf(p))}</span>${isAdmin()?`<span class="pill">${esc(p.pic||"–")}</span>`:""}${p.vo?`<span class="pill">VO ${esc(p.vo)}</span>`:""}${p.kota?`<span class="pill">${esc(p.kota)}</span>`:""}</div>
     ${isClient(p)?mini(p):tagHtml(p)}
@@ -1564,11 +1589,12 @@ document.addEventListener("click",async e=>{
   const vw=e.target.closest(".bnav [data-view],.side [data-view]");if(vw){setView(vw.dataset.view);return}
   const fb=e.target.closest("[data-fu]");if(fb){markFu(fb.dataset.fu);return}
   const fc=e.target.closest("[data-fuch]");if(fc){chooseFu(fc.dataset.id,fc.dataset.fuch);return}
+  const gb=e.target.closest("[data-grp]");if(gb){$("#q").value=gb.dataset.grp;tab="semua";render();setView("list");toast("Menampilkan semua PT dalam grup");return}
   const pb=e.target.closest("[data-pay]");if(pb){openPay(pb.dataset.id,pb.dataset.pay);return}
   const iv=e.target.closest("[data-inv]");if(iv){openInvoice(iv.dataset.inv);return}
   const px=e.target.closest("[data-proxy]");if(px){if($("#moreDlg").open)$("#moreDlg").close();const t=$(px.dataset.proxy);if(t)t.click();return}
   const tb=e.target.closest("[data-tab]");if(tb){tab=tb.dataset.tab;render();return}
-  const ed=e.target.closest("[data-edit]");if(ed&&!e.target.closest("[data-tog]")&&!e.target.closest("[data-pay]")){openForm(ed.dataset.edit);return}
+  const ed=e.target.closest("[data-edit]");if(ed&&!e.target.closest("[data-tog]")&&!e.target.closest("[data-pay]")&&!e.target.closest("[data-grp]")){openForm(ed.dataset.edit);return}
   const gs=e.target.closest("#groupSeg button");if(gs){groupBy=gs.dataset.g;document.querySelectorAll("#groupSeg button").forEach(b=>b.classList.toggle("on",b===gs));render();return}
   const th=e.target.closest("th[data-s]");if(th){const k=th.dataset.s;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=["priceDeal","sisa","step","created"].includes(k)?-1:1}render();return}
   const cl=e.target.closest("[data-close]");if(cl){cl.closest("dialog").close();return}
@@ -1638,10 +1664,14 @@ function openForm(id){
   setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");updPaket(d.paket||"");updBrand();
   const s=tags(d);frm.querySelectorAll('input[name="stat"]').forEach(c=>c.checked=s.includes(c.value));
   showAutoWeek();
+  $("#multiWrap").hidden=!!p;$("#multiOn").checked=false;$("#multiBox").hidden=true;F.ptList.value="";$("#ptOneWrap").classList.remove("mhide");
   invFormFill(d,p);
   updSum();dlg.showModal();F.nama.focus();
 }
 $("#addBtn").onclick=()=>openForm();
+$("#multiOn").addEventListener("change",e=>{const on=e.target.checked;$("#multiBox").hidden=!on;$("#ptOneWrap").classList.toggle("mhide",on);if(on){if(F.perusahaan.value&&!F.ptList.value)F.ptList.value=F.perusahaan.value+"\n";setTimeout(()=>F.ptList.focus(),0)}});
+const ptLines=()=>[...new Set(String(F.ptList.value||"").split("\n").map(x=>x.trim()).filter(Boolean))];
+F.ptList.addEventListener("input",()=>{const n=ptLines().length;$("#multiInfo").textContent=n>1?`Akan dibuat ${n} data (1 grup). Follow-up cukup sekali untuk grup ini.`:"Tiap PT dibuat jadi data sendiri dengan kontak, sumber, layanan & paket yang sama. Follow-up cukup sekali untuk satu grup."});
 frm.addEventListener("submit",async e=>{
   e.preventDefault();const wantInv=showInvAfter;showInvAfter=false;
   const v=k=>String(F[k].value||"").trim();
@@ -1652,6 +1682,8 @@ frm.addEventListener("submit",async e=>{
   if(!v("created")){$("#err").textContent="Isi tanggal masuk.";F.created.focus();return}
   if(!v("layanan")){$("#err").textContent="Pilih layanan.";F.layanan.focus();return}
   if(Array.isArray(paketFor(v("layanan")))&&!v("paket")){$("#err").textContent="Pilih paket untuk layanan "+v("layanan")+".";F.paket.focus();return}
+  const multi=!editingId&&$("#multiOn").checked,pts=multi?ptLines():[];
+  if(multi&&pts.length<2){$("#err").textContent="Isi minimal 2 nama PT (satu per baris), atau matikan 'Order lebih dari 1 PT'.";F.ptList.focus();return}
   const prev=editingId?items.find(x=>x.id===editingId):null;
   const wk=v("minggu")||weekOf(v("created")||TODAY);
   const st=(wk?[wk]:[]).concat([...frm.querySelectorAll('input[name="stat"]:checked')].map(c=>c.value).filter(x=>!WEEKS.includes(x)));
@@ -1663,9 +1695,27 @@ frm.addEventListener("submit",async e=>{
     nilai:moneyVal("nilai"),statuses:st,tglDp:v("tglDp"),tglLunas:v("tglLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
   p.selesai=st.includes("Serah Terima")?((prev&&prev.selesai)||TODAY):"";
   // follow-up sepenuhnya otomatis: nilai lama dipertahankan
-  Object.assign(p,invFormRead(),{fuDone:prev?prev.fuDone||"":"",fuChoice:prev?prev.fuChoice||"":""});
+  Object.assign(p,invFormRead(),{fuDone:prev?prev.fuDone||"":"",fuChoice:prev?prev.fuChoice||"":"",grup:prev?prev.grup||"":""});
   // DP sudah diisi -> status Waiting DP otomatis tercentang (supaya alur & nomor invoice ikut jalan)
   if(hasDp(p)&&!p.statuses.some(x=>PROC.includes(x)))p.statuses.push("Waiting DP");
+  if(multi){
+    // 1 grup: data pertama = pemimpin grup (dipakai untuk follow-up), sisanya anggota
+    p.perusahaan=pts[0];p.grup=p.id;
+    const its=parseItems(p);
+    const fixItems=(x,pt)=>{const a=parseItems(x);if(a.length&&!a.some(i=>i.d.includes(pt)))x.invItems=JSON.stringify(a.map((i,k)=>k===0?Object.assign({},i,{d:i.d+" — "+pt}):i))};
+    fixItems(p,pts[0]);
+    $("#saveBtn").disabled=true;
+    try{
+      await persist(p);
+      for(let k=1;k<pts.length;k++){
+        const m=Object.assign({},p,{id:"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)+k,perusahaan:pts[k],grup:p.id,invNo:"",fuDone:"",fuChoice:"",invItems:JSON.stringify(its)});
+        fixItems(m,pts[k]);await persist(m);
+      }
+      dlg.close();toast(`${pts.length} PT ditambahkan dalam 1 grup`);
+    }catch(err){$("#err").textContent="Gagal menyimpan. Periksa koneksi lalu coba lagi."}
+    finally{$("#saveBtn").disabled=false}
+    return;
+  }
   $("#saveBtn").disabled=true;
   try{await persist(p);dlg.close();const stage=invStage(p);toast(prev?"Perubahan disimpan":stage?"Prospek ditambahkan · invoice dibuat":"Data disimpan. Invoice terbit setelah Waiting DP dicentang.");if(wantInv||(!prev&&stage))openInvoice(p.id)}
   catch(err){$("#err").textContent=err&&err.code==="quota_exceeded"?"Kapasitas penyimpanan penuh. Hapus data lama dulu.":"Gagal menyimpan. Periksa koneksi lalu coba lagi."}
@@ -1828,7 +1878,7 @@ function invHTML(p){
   const b=invProfile(p.invBrand||invBrandFor(brandOf(p)));
   let its=parseItems(p);if(!its.length&&N(p.priceDeal))its=[{d:layananDesc(p.layanan,p.paket)||"Layanan",q:1,h:N(p.priceDeal)}];
   const sub=its.reduce((a,x)=>a+(N(x.q)||1)*N(x.h),0)||N(p.priceDeal);
-  const disk=N(p.diskon),pph=N(p.pph),dp=N(p.dp),lun=N(p.lunas),ppn=ppnOn(p)?Math.round(Math.max(0,sub-disk)*PPN_RATE):0,total=sub-disk+ppn,paid=dp+lun,sisa=Math.max(0,total-paid-pph);
+  const disk=N(p.diskon),pph=N(p.pph),dp=N(p.dp),lun=N(p.lunas),ppn=p._ppn!=null?p._ppn:ppnOn(p)?Math.round(Math.max(0,sub-disk)*PPN_RATE):0,total=sub-disk+ppn,paid=dp+lun,sisa=Math.max(0,total-paid-pph);
   // Sewa Virtual Office: tanpa logo. Kalau logo dipakai, nama brand tidak ditulis lagi.
   const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
   const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
@@ -1879,7 +1929,20 @@ function fitInv(){
   const k=Math.min(1,(body.clientWidth-24)/794);
   doc.style.transform=`scale(${k})`;sc.style.width=(794*k)+"px";sc.style.height=(doc.offsetHeight*k)+"px";
 }
+// invoice gabungan untuk 1 grup: semua PT jadi item, total dijumlahkan
+let invCombine=true;
+function groupInvoice(p){
+  const g=groupOf(p);if(g.length<2)return p;
+  const lead=g.find(x=>x.id===x.grup)||p;
+  const its=[];g.forEach(x=>{const a=parseItems(x);(a.length?a:N(x.priceDeal)?[{d:layananDesc(x.layanan,x.paket)+" — "+(x.perusahaan||x.nama),q:1,h:N(x.priceDeal)}]:[]).forEach(i=>its.push(i))});
+  const sum=k=>g.reduce((a,x)=>a+N(x[k]),0);
+  return Object.assign({},lead,{invItems:JSON.stringify(its),priceDeal:sum("priceDeal"),diskon:sum("diskon"),dp:sum("dp"),lunas:sum("lunas"),pph:sum("pph"),_ppn:g.reduce((a,x)=>a+ppnOf(x),0),
+    perusahaan:lead.perusahaan+(g.length>1?` (+${g.length-1} PT)`:""),statuses:tags(lead),invNo:lead.invNo});
+}
+function invTarget(p){return invCombine&&groupOf(p).length>1?groupInvoice(p):p}
 function paintInv(p){
+  const multi=groupOf(p).length>1;$("#invGrpWrap").hidden=!multi;$("#invGrp").checked=invCombine;
+  p=invTarget(p);
   $("#invDoc").innerHTML=invHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
@@ -1897,16 +1960,17 @@ function loadPdfLib(){
 const invFile=p=>((p.invNo||("invoice "+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
 function printInv(){
   const p=items.find(x=>x.id===invId);if(!p)return;
-  $("#printArea").innerHTML=invHTML(p);document.body.classList.add("printing");
+  $("#printArea").innerHTML=invHTML(invTarget(p));document.body.classList.add("printing");
   setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove("printing"),800)},80);
 }
 $("#invPrint").onclick=printInv;
+$("#invGrp").addEventListener("change",e=>{invCombine=e.target.checked;refreshInvoice()});
 $("#invEdit").onclick=()=>{const id=invId;$("#invDlg").close();openForm(id)};
 $("#invPdf").onclick=async()=>{
   const p=items.find(x=>x.id===invId);if(!p)return;const b=$("#invPdf");b.disabled=true;b.textContent="Menyiapkan PDF…";
   try{
     await loadPdfLib();
-    const area=$("#printArea");area.innerHTML=invHTML(p);
+    const area=$("#printArea");area.innerHTML=invHTML(invTarget(p));
     await Promise.all([...area.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     await window.html2pdf().set({margin:0,filename:invFile(p),image:{type:"jpeg",quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",windowWidth:794},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(area.firstElementChild).save();
