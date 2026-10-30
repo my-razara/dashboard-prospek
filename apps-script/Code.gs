@@ -23,7 +23,7 @@ const FIELDS = [
   ['priceDeal', 'Price Deal'], ['dp', 'Nominal DP'], ['lunas', 'Nominal Pelunasan'], ['keterangan', 'Keterangan'], ['grup', 'Grup'],
   ['nama', 'Nama'], ['wa', 'WhatsApp'], ['layanan', 'Layanan'], ['tahap', 'Tahap Terakhir'], ['sisa', 'Sisa Tagihan'],
   ['diskon', 'Diskon'], ['ppn', 'PPN 11%'], ['pph', 'Potong PPh'], ['retur', 'Return'],
-  ['tglDp', 'Tanggal DP'], ['tglLunas', 'Tanggal Pelunasan'], ['selesai', 'Tanggal Serah Terima'],
+  ['tglDp', 'Tanggal DP'], ['tglLunas', 'Tanggal Pelunasan'], ['bankDp', 'Bank DP'], ['bankLunas', 'Bank Pelunasan'], ['selesai', 'Tanggal Serah Terima'],
   ['nilai', 'Estimasi Nilai'], ['catatan', 'Catatan'], ['followup', 'Follow-up'],
   ['fuDone', 'Follow-up Selesai'], ['fuChoice', 'Pilihan Inbox FU'],
   ['invBrand', 'Brand Invoice'], ['invNo', 'No Invoice'], ['invDate', 'Tanggal Invoice'], ['invDue', 'Jatuh Tempo'],
@@ -490,6 +490,9 @@ function migrate_(ss, sh) {
     if (!o.no) o.no = n + 1;
     const m = monthOf_(o.created);
     o.bulanNo = m || ''; o.bulanTxt = m ? MON_TXT[m - 1] : ''; o.tahun = Number(String(o.created || '').slice(0, 4)) || '';
+    // Price Deal versi baru (total item - diskon - PPh + PPN); sisa tagihan tidak berubah
+    const mo = money_(o);
+    if (mo.gross) { if (mo.items) o.invItems = mo.items; o.priceDeal = mo.net; o.sisa = mo.sisa; }
     return FIELDS.map(f => (o[f[0]] == null ? '' : o[f[0]])).concat(extra.map(x => r[x.i]));
   });
   const width = FIELDS.length + extra.length;
@@ -533,6 +536,26 @@ function readAll_(ss) {
   return out;
 }
 
+// Price Deal = total item invoice - diskon - PPh + PPN (PPN 11% hanya Sewa Virtual Office yang dipilih "Ya").
+// Data lama tanpa rincian item: Price Deal lama dianggap total item (sebelum diskon) lalu dijadikan 1 item.
+function money_(o) {
+  let its = [];
+  try { its = typeof o.invItems === 'string' ? JSON.parse(o.invItems || '[]') : (o.invItems || []); } catch (e) { its = []; }
+  if (!Array.isArray(its)) its = [];
+  its = its.filter(x => x && (x.d || Number(x.h)));
+  let gross = its.reduce((a, x) => a + (Number(x.q) || 1) * (Number(x.h) || 0), 0);
+  let items = null;
+  if (!gross && (Number(o.priceDeal) || 0) > 0) {
+    gross = Number(o.priceDeal);
+    const d = (its[0] && its[0].d) || (o.layanan ? o.layanan + (o.paket ? ' (Paket ' + o.paket + ')' : '') : 'Layanan');
+    items = JSON.stringify([{ d: d, q: 1, h: gross }]);
+  }
+  const disk = Number(o.diskon) || 0, pph = Number(o.pph) || 0;
+  const ppn = (o.layanan === 'Sewa Virtual Office' && o.ppn === 'Ya') ? Math.round(Math.max(0, gross - disk) * 0.11) : 0;
+  const net = gross - disk - pph + ppn;
+  return { gross: gross, net: net, items: items, sisa: gross ? net - (Number(o.dp) || 0) - (Number(o.lunas) || 0) : '' };
+}
+
 function toRow_(o, ex) {
   // kolom yang tidak dikirim (misal dari aplikasi versi lama) tetap memakai isi yang sudah ada
   if (ex) {
@@ -545,14 +568,12 @@ function toRow_(o, ex) {
   const st = Array.isArray(o.statuses) ? o.statuses : [];
   let c = -1;
   PROC.forEach((s, i) => { if (st.indexOf(s) >= 0) c = i; });
-  const pd = Number(o.priceDeal) || 0;
-  // PPN 11% hanya untuk Sewa Virtual Office bila dipilih "Ya"
-  const ppn = (o.layanan === 'Sewa Virtual Office' && o.ppn === 'Ya') ? Math.round(Math.max(0, pd - (+o.diskon || 0)) * 0.11) : 0;
-  const sisa = pd ? pd - (+o.diskon || 0) + ppn - (+o.dp || 0) - (+o.lunas || 0) - (+o.pph || 0) : '';
-  const x = Object.assign({}, o, {
+  const mo = money_(o);
+  const x = Object.assign({}, o, mo.items ? { invItems: mo.items } : {}, {
+    priceDeal: mo.gross ? mo.net : (o.priceDeal === '' || o.priceDeal == null ? '' : 0),
     statuses: st.join(', '),
     tahap: c >= 0 ? PROC[c] : '',
-    sisa: sisa,
+    sisa: mo.sisa,
     bulanNo: monthOf_(o.created) || '',
     bulanTxt: monthOf_(o.created) ? MON_TXT[monthOf_(o.created) - 1] : '',
     tahun: Number(String(o.created || '').slice(0, 4)) || '',

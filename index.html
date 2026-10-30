@@ -523,6 +523,7 @@ dialog .mb{overflow-x:hidden}
 .iv-mark{font-size:26px;font-weight:800;color:var(--acc);letter-spacing:-.01em;line-height:1.1;max-width:340px}
 .iv-title{text-align:right}
 .iv-title h1{margin:0;font-size:40px;font-weight:300;letter-spacing:.02em;color:#2b2f38;line-height:1}
+.iv-title h1.pf{font-size:31px}
 .iv-no{margin-top:6px;font-size:13.5px;color:#6b7280}
 .iv-info{display:flex;justify-content:space-between;gap:28px;margin-top:26px}
 .iv-parties{display:flex;flex-direction:column;gap:18px;max-width:330px}
@@ -898,7 +899,7 @@ dialog .mb{overflow-x:hidden}
           <label>Jatuh tempo<input name="invDue" type="date"></label>
           <label id="ppnWrap"><span class="lt">Invoice pakai PPN? <span class="rq" aria-hidden="true">*</span></span><select name="ppn"><option value="">Tidak</option><option value="Ya">Ya, tambah PPN 11%</option></select><span class="hint" id="ppnHint"></span></label>
           <label class="full">Alamat klien<textarea name="alamat" rows="2" placeholder="Alamat penagihan"></textarea></label>
-          <div class="full items"><div class="items-h"><span>Rincian item</span><span class="hint">Total item otomatis jadi Price deal</span></div>
+          <div class="full items"><div class="items-h"><span>Rincian item</span><span class="hint">Price deal = total item − diskon − PPh + PPN</span></div>
             <div class="irow ihead desk-only" aria-hidden="true"><span>Deskripsi</span><span>Qty</span><span>Harga satuan</span><span></span></div>
             <div id="itemRows"></div>
             <button class="btn sm" type="button" id="addItem">+ Tambah item</button></div>
@@ -906,14 +907,16 @@ dialog .mb{overflow-x:hidden}
       </div>
       <div class="sec qh"><h4>Keuangan</h4>
         <div class="form">
-          <label>Price deal (Rp)<input name="priceDeal" class="money" inputmode="numeric" placeholder="0"><span class="hint" id="pdHint"></span></label>
+          <label>Price deal (otomatis)<input name="priceDeal" class="money" inputmode="numeric" placeholder="0"><span class="hint" id="pdHint"></span></label>
           <label>Diskon (Rp)<input name="diskon" class="money" inputmode="numeric" placeholder="0"></label>
           <label>Potong PPh (Rp)<input name="pph" class="money" inputmode="numeric" placeholder="0"></label>
           <label>Tanggal DP<input name="tglDp" type="date"></label>
           <label>Nominal DP (Rp)<input name="dp" class="money" inputmode="numeric" placeholder="0"></label>
+          <label>Bank DP<select name="bankDp"></select></label>
           <label>Return (Rp)<input name="retur" class="money" inputmode="numeric" placeholder="0"></label>
           <label>Tanggal pelunasan<input name="tglLunas" type="date"></label>
           <label>Nominal pelunasan (Rp)<input name="lunas" class="money" inputmode="numeric" placeholder="0"></label>
+          <label>Bank pelunasan<select name="bankLunas"></select></label>
           <label>&nbsp;<button class="btn sm" type="button" id="fillLunas">Isi pelunasan = sisa tagihan</button></label>
           <div class="sumbox" id="sumbox"></div>
           <label class="full">Keterangan<textarea name="keterangan" placeholder="Keterangan pembayaran, rekening tujuan, dll."></textarea></label>
@@ -989,7 +992,7 @@ dialog .mb{overflow-x:hidden}
     <button class="btn sm" type="button" id="invPdf">Download PDF</button>
     <button class="btn sm primary" type="button" id="invShare">Kirim ke WA</button>
     </div></div>
-  <div class="kat" id="invMode" hidden><button type="button" data-im="inv">Invoice</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
+  <div class="kat" id="invMode" hidden><button type="button" data-im="inv">Invoice / Proforma</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
   <div class="inote" id="invNote" hidden></div>
   <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
@@ -999,9 +1002,10 @@ dialog .mb{overflow-x:hidden}
   <form id="payFrm" novalidate>
     <div class="mh"><h2 id="payTitle">DP masuk</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
     <div class="mb"><div class="form" style="grid-template-columns:1fr 1fr">
-      <label class="full">Price deal (Rp)<input name="pd" class="money" inputmode="numeric" placeholder="0"></label>
+      <label class="full">Harga layanan (Rp)<input name="pd" class="money" inputmode="numeric" placeholder="0"></label>
       <label><span id="payLbl">Nominal DP (Rp)</span><input name="nom" class="money" inputmode="numeric" placeholder="0"></label>
       <label>Tanggal<input name="tgl" type="date"></label>
+      <div class="full"><div class="items-h"><span>Ditransfer ke</span><span class="hint">Muncul di kwitansi</span></div><div class="chips" id="payBank"></div></div>
       <p class="hint full" id="payInfo" style="margin:0"></p>
       <div class="err full" id="payErr"></div>
     </div></div>
@@ -1214,14 +1218,19 @@ function chooseFu(id,ch){
 // PPN 11% hanya untuk Sewa Virtual Office yang dipilih "Ya"
 const PPN_RATE=0.11;
 const ppnOn=p=>p.layanan==="Sewa Virtual Office"&&(p.ppn==="Ya"||p.ppn===true);
-const ppnOf=p=>ppnOn(p)?Math.round(Math.max(0,N(p.priceDeal)-N(p.diskon))*PPN_RATE):0;
+// Price deal = total item invoice − diskon − PPh + PPN (kalau pakai PPN). Dihitung otomatis.
+// gross = total item invoice (data lama tanpa item: price deal lama = total sebelum diskon)
 function money(p){
-  const ppn=ppnOf(p);
-  const tagihan=N(p.priceDeal)-N(p.diskon)+ppn;
+  const its=parseItems(p);let gross=its.reduce((a,x)=>a+(N(x.q)||1)*N(x.h),0);if(!gross)gross=N(p.priceDeal);
+  const disk=N(p.diskon),pph=N(p.pph);
+  const ppn=p._ppn!=null?p._ppn:ppnOn(p)?Math.round(Math.max(0,gross-disk)*PPN_RATE):0;
+  const tagihan=gross-disk+ppn,net=tagihan-pph;
   const bayar=N(p.dp)+N(p.lunas);
-  const sisa=N(p.priceDeal)?tagihan-bayar-N(p.pph):0;
-  return {tagihan,bayar,sisa,ppn,masuk:bayar-N(p.retur)};
+  const sisa=gross?net-bayar:0;
+  return {gross,tagihan,net,bayar,sisa,ppn,masuk:bayar-N(p.retur)};
 }
+const ppnOf=p=>money(p).ppn;
+const pdOf=p=>money(p).net;
 
 // ---------- storage: offline-first, sinkron ke Google Sheets ----------
 const API=((window.APP_CONFIG||{}).API_URL||"").trim();
@@ -1548,16 +1557,16 @@ function render(){
     <div class="kpi"><div class="l">Dalam pengerjaan</div><div class="n num">${proc.length}</div><div class="h">${proc.filter(p=>curStep(p)===0).length} waiting DP · ${proc.filter(p=>has(p,"Waiting Lunas")&&!has(p,"Lunas")).length} menunggu lunas</div></div>
     <div class="kpi"><div class="l">Serah terima bulan ini</div><div class="n num">${doneMonth}</div><div class="h">total selesai: ${B.filter(p=>phase(p)==="selesai").length}</div></div>
     <div class="kpi ${late?"warn":""}"><div class="l">Follow-up belum dikerjakan</div><div class="n num">${late}</div><div class="h">${inboxN} di inbox · ${missedN} ada FU terlewat</div></div>`;
-  const OMk=orderMap(),RP=B.filter(p=>OMk[p.id]&&paidRec(p)),rpLead=new Set(RP.map(leadKey)).size,rpVal=RP.reduce((a,p)=>a+N(p.priceDeal),0);
+  const OMk=orderMap(),RP=B.filter(p=>OMk[p.id]&&paidRec(p)),rpLead=new Set(RP.map(leadKey)).size,rpVal=RP.reduce((a,p)=>a+pdOf(p),0);
   const C=B.filter(isClient);let deal=0,dp=0,lun=0,sisa=0,pph=0,ret=0,disk=0;
-  C.forEach(p=>{const m=money(p);deal+=N(p.priceDeal);dp+=N(p.dp);lun+=N(p.lunas);sisa+=Math.max(0,m.sisa);pph+=N(p.pph);ret+=N(p.retur);disk+=N(p.diskon)});
+  C.forEach(p=>{const m=money(p);deal+=pdOf(p);dp+=N(p.dp);lun+=N(p.lunas);sisa+=Math.max(0,m.sisa);pph+=N(p.pph);ret+=N(p.retur);disk+=N(p.diskon)});
   // Total Waiting DP: jumlah price deal semua data yang posisinya di Waiting DP (sama dengan lingkaran Waiting DP di alur)
-  const wdp=B.filter(p=>["prospek","proses"].includes(phase(p))&&curStep(p)===0),wdpVal=wdp.reduce((a,p)=>a+N(p.priceDeal),0);
+  const wdp=B.filter(p=>["prospek","proses"].includes(phase(p))&&curStep(p)===0),wdpVal=wdp.reduce((a,p)=>a+pdOf(p),0);
   $("#fin").innerHTML=`
     <div class="kpi"><div class="l">Total price deal</div><div class="n num">${rpS(deal)}</div><div class="h">diskon ${rpS(disk)} · repeat ${rpLead} order (${rpS(rpVal)})</div></div>
     <div class="kpi"><div class="l">Uang masuk</div><div class="n num">${rpS(dp+lun-ret)}</div><div class="h">DP ${rpS(dp)} · lunas ${rpS(lun)} · return ${rpS(ret)}</div></div>
     <div class="kpi"><div class="l">Sisa tagihan</div><div class="n num">${rpS(sisa)}</div><div class="h">${C.filter(p=>money(p).sisa>0).length} klien belum lunas</div></div>
-    <div class="kpi"><div class="l">Total Waiting DP</div><div class="n num">${rpS(wdpVal)}</div><div class="h">dari ${wdp.filter(p=>N(p.priceDeal)).length} data ber-price deal · ${wdp.length} di Waiting DP</div></div>`;
+    <div class="kpi"><div class="l">Total Waiting DP</div><div class="n num">${rpS(wdpVal)}</div><div class="h">dari ${wdp.filter(p=>pdOf(p)).length} data ber-price deal · ${wdp.length} di Waiting DP</div></div>`;
 
   // follow up + inbox
   const ib=FS.filter(([p,s])=>s.inbox).map(x=>x[0]);
@@ -1581,13 +1590,13 @@ function render(){
   // ---- tugas hari ini ----
   const actv=B.filter(p=>["prospek","proses"].includes(phase(p)));
   const dpWait=actv.filter(p=>curStep(p)===0&&!hasDp(p)).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
-  const overdue=actv.filter(p=>N(p.priceDeal)&&money(p).sisa>0&&p.invDue&&p.invDue<TODAY).sort((a,b)=>a.invDue.localeCompare(b.invDue));
+  const overdue=actv.filter(p=>pdOf(p)&&money(p).sisa>0&&p.invDue&&p.invDue<TODAY).sort((a,b)=>a.invDue.localeCompare(b.invDue));
   const waB=(p,k,l,def)=>{const w=k?waFuLink(p,k):waLink(p.wa);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener"${k?"":` data-wapick="${p.id}"${def?` data-wdef="${def}"`:""}`}>${l||"WA"}</a>`:""};
   const li=(p,mid,acts)=>`<li><div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${p.paket?" "+esc(p.paket):""}${isAdmin()?" · "+esc(p.pic||""):""}</span></div><div class="fu-mid">${mid}</div><span class="fu-act">${acts}</span></li>`;
   const none=t=>`<li class="empty">${t}</li>`;
   $("#tgIb").innerHTML=ib.length?ib.map(p=>`<li>${who(p)}<div class="fu-choice"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div></li>`).join(""):none("Tidak ada yang perlu dipilih.");
   $("#tgFu").innerHTML=due.length?due.map(p=>{const s=fuState(p),d=dd(s.date);return li(p,`<span class="fuc due">${esc(s.label)}</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}`,waB(p,s.label,"WA "+esc(s.label))+`<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button>`)}).join(""):none("Semua follow-up hari ini beres. Mantap!");
-  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${N(p.priceDeal)?`<small>Deal ${rpS(p.priceDeal)}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
+  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${pdOf(p)?`<small>Deal ${rpS(pdOf(p))}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
   $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p,"","WA","TAGIH")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
   [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
   const tgN=ib.length+due.length+dpWait.length+overdue.length;
@@ -1608,7 +1617,7 @@ function render(){
   // table
   const list=B.filter(p=>inTab(p)&&stepOk(p));
   const fuOrd=p=>{const s=fuState(p);return !s.active?999:s.upcoming?500+FU_LABELS.indexOf(s.next):FU_LABELS.indexOf(s.label)*2+(s.done?1:0)};
-  const getv=(p,k)=>k==="fu"?fuOrd(p):k==="sisa"?money(p).sisa:k==="step"?curStep(p):k==="priceDeal"?N(p.priceDeal):k==="brand"?brandOf(p):(p[k]||"");
+  const getv=(p,k)=>k==="fu"?fuOrd(p):k==="sisa"?money(p).sisa:k==="step"?curStep(p):k==="priceDeal"?pdOf(p):k==="brand"?brandOf(p):(p[k]||"");
   const sorted=[...list].sort((a,b)=>{let x=getv(a,sortKey),y=getv(b,sortKey);if(typeof x==="number")return (x-y)*sortDir;x=x||"\uffff";y=y||"\uffff";return String(x).localeCompare(String(y))*sortDir});
   const work=tab==="proses"||tab==="selesai";
   const cols=[["nama","Klien / prospek"],["layanan","Layanan"],["sumber","Sumber"],["pic","PIC"]]
@@ -1618,7 +1627,7 @@ function render(){
   const tagHtml=p=>`<div class="stags">${ALL.filter(t=>has(p,t)).map(t=>WEEKS.includes(t)?`<span class="st wk">${esc(t)} · ${esc(ymShort(bulanOf(p)))}</span>`:`<span class="st ${PROC.includes(t)?"p":t==="Klien"?"k":["Lose","Spam","Delete"].includes(t)?"neg":t==="Kasih Promo"?"pr":""}">${esc(t)}</span>`).join("")||`<span class="co">belum ada</span>`}</div>`;
   const mini=p=>{const c=curStep(p);return `<div class="mini">${PROC.map((s,i)=>`<button type="button" class="${has(p,s)?"on":""} ${i===PROC.length-1?"fin":""}" data-tog="${p.id}" data-tag="${esc(s)}" title="${esc(s)}" aria-label="${esc(s)} ${has(p,s)?"(selesai)":"(belum)"}" aria-pressed="${has(p,s)}"></button>`).join("")}</div><div class="mini-l">${c>=0?esc(PROC[c]):"Prospek"}${c<PROC.length-1?` <span class="co">→ ${esc(PROC[c+1])}</span>`:""}</div>`};
   const fuCell=p=>`<div class="fucell">${fuChip(p,true)}</div>`;
-  const sisaCell=p=>{if(!N(p.priceDeal))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
+  const sisaCell=p=>{if(!pdOf(p))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
   const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
@@ -1626,13 +1635,13 @@ function render(){
   const op=p=>{const o=OM[p.id];return o?` <span class="opill" title="Klien langganan. Order sebelumnya: ${esc(o.prev.map(d=>d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"?").join(", "))}">Order ke-${o.k+1}</span>`:""};
   const gp=p=>op(p)+(()=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""})();
   const rowHTML=p=>`<tr><td><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc([p.perusahaan,p.wa].filter(Boolean).join(" · "))}</div></td><td>${lay(p)}</td><td>${src(p)}</td><td>${esc(p.pic||"–")}</td>`+
-    (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
-         :`<td>${tagHtml(p)}</td><td class="num">${N(p.priceDeal)?rpS(p.priceDeal):N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td><td class="num">${fmtD(p.created)}<div class="co">${esc(mingguOf(p))} · ${esc(ymShort(bulanOf(p)))}</div></td>`)+
+    (work?`<td>${mini(p)}</td><td>${esc(p.vo||"–")}${p.kota?`<div class="co">${esc(p.kota)}</div>`:""}</td><td class="num">${pdOf(p)?rpS(pdOf(p)):"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td>`
+         :`<td>${tagHtml(p)}</td><td class="num">${pdOf(p)?rpS(pdOf(p)):N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:"–"}</td><td class="num">${sisaCell(p)}</td><td class="num">${fuCell(p)}</td><td class="num">${fmtD(p.created)}<div class="co">${esc(mingguOf(p))} · ${esc(ymShort(bulanOf(p)))}</div></td>`)+
     `<td>${act(p)}</td></tr>`;
   const emptyRow=`<tr><td colspan="${cols.length}" class="empty" style="text-align:center">${items.length?"Tidak ada data yang cocok dengan filter ini.":"Belum ada data tercatat."}</td></tr>`;
   const cardHTML=p=>{const w=waLink(p.wa);return `<div class="mc" data-edit="${p.id}" role="button" tabindex="0" aria-label="Buka ${esc(p.nama)}">
     <div class="r1"><div class="mn"><div class="nm">${esc(p.nama)}${gp(p)}</div><div class="co">${esc(p.layanan||"–")}${p.paket?" · "+esc(p.paket):""}${p.perusahaan?" · "+esc(p.perusahaan):""}</div></div>
-      <div class="amt num">${N(p.priceDeal)?`<b>${rpS(p.priceDeal)}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
+      <div class="amt num">${pdOf(p)?`<b>${rpS(pdOf(p))}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
     <div class="meta"><span class="pill">${esc(p.sumber||"–")} · ${esc(brandOf(p))}</span>${isAdmin()?`<span class="pill">${esc(p.pic||"–")}</span>`:""}${p.vo?`<span class="pill">VO ${esc(p.vo)}</span>`:""}${p.kota?`<span class="pill">${esc(p.kota)}</span>`:""}</div>
     ${isClient(p)?mini(p):tagHtml(p)}
     <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WhatsApp</a>`:""}</span></div></div>`};
@@ -1729,10 +1738,10 @@ F.sumber.addEventListener("change",updBrand);
 // PIC memilih sumber sendiri -> saran Repeat otomatis tidak menimpa pilihannya
 let sumberTouched=false,repAuto=null;
 F.sumber.addEventListener("change",()=>{sumberTouched=true;repAuto=null;if(typeof paintDup==="function")paintDup()});
-function formMoney(){return {layanan:F.layanan.value,ppn:F.ppn.value,priceDeal:moneyVal("priceDeal"),diskon:moneyVal("diskon"),dp:moneyVal("dp"),lunas:moneyVal("lunas"),pph:moneyVal("pph"),retur:moneyVal("retur")}}
+function formMoney(){const its=readItems();return {layanan:F.layanan.value,ppn:F.ppn.value,invItems:JSON.stringify(its),priceDeal:its.reduce((a,x)=>a+x.q*x.h,0),diskon:moneyVal("diskon"),dp:moneyVal("dp"),lunas:moneyVal("lunas"),pph:moneyVal("pph"),retur:moneyVal("retur")}}
 function updSum(){const m=money(formMoney());const f=formMoney();
-  updPpnUI(m);
-  $("#sumbox").innerHTML=`<div>Tagihan bersih${m.ppn?" (incl. PPN)":""}<b class="num">${rp(m.tagihan)}</b></div><div>Sudah dibayar<b class="num">${rp(m.bayar)}</b></div><div>Sisa tagihan<b class="num" style="color:${m.sisa>0?"var(--lost)":"var(--deal)"}">${f.priceDeal?rp(m.sisa):"–"}</b></div><div>Uang masuk bersih<b class="num">${rp(m.masuk)}</b></div>`}
+  updPpnUI(m);setMoney("priceDeal",m.net);
+  $("#sumbox").innerHTML=`<div>Tagihan bersih${m.ppn?" (incl. PPN)":""}<b class="num">${rp(m.tagihan)}</b></div><div>Sudah dibayar<b class="num">${rp(m.bayar)}</b></div><div>Sisa tagihan<b class="num" style="color:${m.sisa>0?"var(--lost)":"var(--deal)"}">${m.gross?rp(m.sisa):"–"}</b></div><div>Uang masuk bersih<b class="num">${rp(m.masuk)}</b></div>`}
 function updPpnUI(m){
   const vo=F.layanan.value==="Sewa Virtual Office";$("#ppnWrap").style.display=vo?"":"none";
   $("#ppnHint").textContent=vo&&m&&m.ppn?"PPN 11%: "+rp(m.ppn):vo?"Khusus Sewa Virtual Office":"";
@@ -1750,6 +1759,7 @@ function openForm(id){
   ["nama","perusahaan","wa","pic","vo","kota","created","tglDp","tglLunas","keterangan","catatan"].forEach(k=>F[k].value=d[k]||"");
   setSumberField(d.sumber||"");
   ["nilai","priceDeal","diskon","dp","lunas","pph","retur"].forEach(k=>setMoney(k,d[k]));
+  fillBankSel(F.bankDp,d.bankDp||"");fillBankSel(F.bankLunas,d.bankLunas||"");
   setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");updPaket(d.paket||"");updBrand();
   const s=tags(d);frm.querySelectorAll('input[name="stat"]').forEach(c=>c.checked=s.includes(c.value));
   showAutoWeek();
@@ -1781,12 +1791,13 @@ frm.addEventListener("submit",async e=>{
   const p=Object.assign({id:editingId||("p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     nama:v("nama"),perusahaan:v("perusahaan"),wa:v("wa"),sumber:sumberVal(),brand:src?src.b:(brFromInv||(prev&&prev.brand)||""),pic:isAdmin()?v("pic"):user.name,
     bulan:(v("created")||TODAY).slice(0,7),minggu:weekOf(v("created")||TODAY),layanan:v("layanan"),paket:Array.isArray(paketFor(v("layanan")))?v("paket"):v("paketManual"),vo:v("vo"),kota:v("kota"),created:v("created")||TODAY,
-    nilai:moneyVal("nilai"),statuses:st,tglDp:v("tglDp"),tglLunas:v("tglLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
+    nilai:moneyVal("nilai"),statuses:st,tglDp:v("tglDp"),tglLunas:v("tglLunas"),bankDp:v("bankDp"),bankLunas:v("bankLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
   p.selesai=st.includes("Serah Terima")?((prev&&prev.selesai)||TODAY):"";
   // follow-up sepenuhnya otomatis: nilai lama dipertahankan
   Object.assign(p,invFormRead(),{fuDone:prev?prev.fuDone||"":"",fuChoice:prev?prev.fuChoice||"":"",grup:prev?prev.grup||"":""});
   // DP sudah diisi -> status Waiting DP otomatis tercentang (supaya alur & nomor invoice ikut jalan)
   if(hasDp(p)&&!p.statuses.some(x=>PROC.includes(x)))p.statuses.push("Waiting DP");
+  p.priceDeal=money(p).net;payDateInv(p);
   if(multi){
     // 1 grup: data pertama = pemimpin grup (dipakai untuk follow-up), sisanya anggota
     p.perusahaan=pts[0];p.grup=p.id;
@@ -1893,8 +1904,7 @@ function itemRow(it){
 function readItems(){return [...document.querySelectorAll("#itemRows .irow")].map(r=>({d:r.querySelector(".i-d").value.trim(),q:N(r.querySelector(".i-q").value)||1,h:N(r.querySelector(".i-h").value.replace(/\D/g,""))})).filter(x=>x.d||x.h)}
 function syncItems(){
   const sub=readItems().reduce((a,x)=>a+x.q*x.h,0);
-  if(sub>0){setMoney("priceDeal",sub);F2.priceDeal.readOnly=true;$("#pdHint").textContent="Otomatis dari total item invoice"}
-  else{F2.priceDeal.readOnly=false;$("#pdHint").textContent=""}
+  F2.priceDeal.readOnly=true;$("#pdHint").textContent=sub>0?"Otomatis: total item − diskon − PPh + PPN":"Isi harga di Rincian item invoice";
   updSum();
 }
 function refreshAutoDesc(){const r=document.querySelector("#itemRows .irow");if(r&&!r.dataset.touched)r.querySelector(".i-d").value=autoDesc()}
@@ -1913,7 +1923,7 @@ function invFormFill(d,p){
   const w=$("#itemRows");w.innerHTML="";
   const its=parseItems(d);
   if(its.length)its.forEach(it=>w.appendChild(itemRow(Object.assign({touched:true},it))));
-  else w.appendChild(itemRow({d:layananDesc(d.layanan,d.paket),q:1,h:p?N(d.priceDeal):0}));
+  else w.appendChild(itemRow({d:layananDesc(d.layanan,d.paket),q:1,h:p?money(d).gross:0}));
   syncItems();
   renderRek(rekOf(d));
   $("#invFromForm").hidden=!p;
@@ -2003,9 +2013,9 @@ $("#invFromForm").onclick=()=>{showInvAfter=true;if(frm.requestSubmit)frm.reques
 // angka-angka invoice (dipakai invoice, kwitansi & template WA)
 function invCalc(p){
   const b=invProfile(p.invBrand||invBrandFor(brandOf(p)));
-  let its=parseItems(p);if(!its.length&&N(p.priceDeal))its=[{d:layananDesc(p.layanan,p.paket)||"Layanan",q:1,h:N(p.priceDeal)}];
-  const sub=its.reduce((a,x)=>a+(N(x.q)||1)*N(x.h),0)||N(p.priceDeal);
-  const disk=N(p.diskon),pph=N(p.pph),dp=N(p.dp),lun=N(p.lunas),ppn=p._ppn!=null?p._ppn:ppnOn(p)?Math.round(Math.max(0,sub-disk)*PPN_RATE):0,total=sub-disk+ppn,paid=dp+lun,sisa=Math.max(0,total-paid-pph);
+  const m=money(p);
+  let its=parseItems(p).filter(x=>N(x.h)||x.d);if(!its.some(x=>N(x.h))&&m.gross)its=[{d:(its[0]&&its[0].d)||layananDesc(p.layanan,p.paket)||"Layanan",q:1,h:m.gross}];
+  const sub=m.gross,disk=N(p.diskon),pph=N(p.pph),dp=N(p.dp),lun=N(p.lunas),ppn=m.ppn,total=m.tagihan,paid=dp+lun,sisa=Math.max(0,m.sisa);
   // rekening yang dipilih; penerbit invoice = atas nama rekening pertama (mis. CV. Mitra Konsultasi)
   const pick=rekOf(p),all=allRekening(),bk=pick.length?all.filter(x=>pick.includes(x.key)):banksOf(b);
   const issuer=(bk[0]&&bk[0].an)||b.legal||b.brand;
@@ -2016,6 +2026,7 @@ function invHTML(p){
   // Sewa Virtual Office: tanpa logo. Kalau logo dipakai, nama brand tidak ditulis lagi.
   const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
   const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
+  const fin=isFinalInv(p),docDate=fin?(p.tglLunas||p.invDate):(N(p.dp)>0&&p.tglDp)||p.invDate||p.created;
   const terms=isPaid?"Lunas":paid?"2/2":"1/2";
   const fd=s=>s?new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"–";
   const fds=s=>new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
@@ -2025,15 +2036,15 @@ function invHTML(p){
   return `<div class="inv iv" style="--acc:${esc(b.warna||"#14213D")}">
   <div class="iv-head">
     <div class="iv-logo">${useLogo?`<img src="${b.logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
-    <div class="iv-title"><h1>INVOICE</h1><div class="iv-no"># ${p.invNo?esc(p.invNo):`<span class="muted">${draft?"belum diterbitkan":"menunggu sinkron"}</span>`}</div></div>
+    <div class="iv-title"><h1${fin?"":` class="pf"`}>${fin?"INVOICE":"PROFORMA INVOICE"}</h1><div class="iv-no"># ${p.invNo?esc(p.invNo):`<span class="muted">${draft?"belum diterbitkan":"menunggu sinkron"}</span>`}</div></div>
   </div>
   <div class="iv-info">
     <div class="iv-parties">
       <div class="iv-from"><b>${esc(issuer)}</b>${b.alamat?`<div>${br(b.alamat)}</div>`:""}${[b.telp,b.email,b.web].filter(Boolean).length?`<div>${[b.telp,b.email,b.web].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>
-      <div class="iv-to"><div class="k">Bill To:</div><b>${esc(p.perusahaan||p.nama)}</b>${p.perusahaan&&p.nama?`<div>u.p. ${esc(p.nama)}</div>`:""}${p.alamat?`<div>${br(p.alamat)}</div>`:""}${p.kota?`<div>${esc(p.kota)}</div>`:""}${[p.wa,p.email].filter(Boolean).length?`<div>${[p.wa,p.email].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>
+      <div class="iv-to"><div class="k">Bill To:</div><b>${esc(p.perusahaan||p.nama)}</b>${p.alamat?`<div>${br(p.alamat)}</div>`:""}${p.email?`<div>${esc(p.email)}</div>`:""}</div>
     </div>
     <div class="iv-meta">
-      ${tr("Date:",fd(p.invDate||p.created))}${tr("Payment Terms:",terms)}${tr("Due Date:",fd(p.invDue))}${p.vo?tr("VO Location:",esc(p.vo)):""}
+      ${tr("Date:",fd(docDate))}${tr("Payment Terms:",terms)}${tr("Due Date:",fd(p.invDue))}
       ${tr("Balance Due:",R(sisa),"bal")}
     </div>
   </div>
@@ -2045,7 +2056,7 @@ function invHTML(p){
     ${tr("Total:",R(total),"tot")}${dp?tr("DP"+(p.tglDp?` · ${fds(p.tglDp)}`:"")+":","− "+R(dp)):""}${lun?tr("Payment"+(p.tglLunas?` · ${fds(p.tglLunas)}`:"")+":","− "+R(lun)):""}${pph?tr("PPh Withholding:","− "+R(pph)):""}
     ${tr("Balance Due:",R(sisa),"bal")}
   </div>
-  <div class="iv-say"><span>Terbilang</span>${terbilang(sisa>0?sisa:total)}</div>
+  <div class="iv-say"><span>Terbilang</span>${terbilang(sisa>0?sisa:total-pph)}</div>
   <div class="iv-foot">
     <div class="iv-terms"><div class="k">Terms:</div>${bk.length?bk.map(x=>`<div><b>${esc(x.bank)}</b> - ${esc(x.norek)}</div>`).join("")+`<div>${esc(issuer)}</div>`:`<div class="muted">Rekening belum diisi di Pengaturan</div>`}
       ${p.keterangan?`<div class="k" style="margin-top:14px">Notes:</div><div>${br(p.keterangan)}</div>`:""}</div>
@@ -2075,11 +2086,11 @@ function kwHTML(p,mode){
   </div>
   <div class="kw-from"><b>${esc(issuer)}</b>${b.alamat?`<div>${br(b.alamat)}</div>`:""}${[b.telp,b.email,b.web].filter(Boolean).length?`<div>${[b.telp,b.email,b.web].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>
   <div class="kw-body">
-    ${row("Telah terima dari",`<b>${esc(p.perusahaan||p.nama)}</b>${p.perusahaan&&p.nama?` <span class="kw-up">u.p. ${esc(p.nama)}</span>`:""}`)}
+    ${row("Telah terima dari",`<b>${esc(p.perusahaan||p.nama)}</b>`)}
     ${row("Uang sejumlah",`<div class="kw-amt">${R(amt)}</div><div class="kw-say">${terbilang(amt)}</div>`)}
     ${row("Untuk pembayaran",esc(untuk))}
     ${row("Tanggal bayar",esc(fdi(tgl)))}
-    ${bk.length?row("Ditransfer ke",bk.slice(0,1).map(x=>`${esc(x.bank)} ${esc(x.norek)} a.n. ${esc(x.an||issuer)}`).join("")):""}
+    ${(()=>{const t=(isDp?p.bankDp:p.bankLunas)||(bk.length?rekLabel(bk[0]):"");return t?row("Ditransfer ke",esc(t)):""})()}
   </div>
   <div class="kw-foot">
     <div class="kw-sum">
@@ -2122,7 +2133,7 @@ function paintInv(p){
   if((invMode==="dp"&&!hasD)||(invMode==="lunas"&&!hasL))invMode="inv";
   $("#invMode").hidden=!hasD&&!hasL;
   document.querySelectorAll("#invMode [data-im]").forEach(x=>{x.hidden=(x.dataset.im==="dp"&&!hasD)||(x.dataset.im==="lunas"&&!hasL);x.classList.toggle("on",x.dataset.im===invMode)});
-  $("#invTtl").textContent=invMode==="inv"?"Invoice":"Kwitansi";
+  $("#invTtl").textContent=invMode==="inv"?(isFinalInv(p)?"Invoice":"Proforma invoice"):"Kwitansi";
   $("#invDoc").innerHTML=docHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
@@ -2235,30 +2246,50 @@ document.addEventListener("click",e=>{if(e.target.closest(".themeBtn")){setTheme
 if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener("change",themeUI);
 themeUI();
 // ---------- aksi cepat: DP masuk / pelunasan ----------
-function payKind(p){const ph=phase(p);if(!["prospek","proses"].includes(ph))return "";if(!hasDp(p))return curStep(p)<=0?"dp":"";return N(p.priceDeal)&&money(p).sisa>0?"lunas":""}
+// ---------- bank tujuan transfer (untuk kwitansi) ----------
+const rekLabel=x=>[x.bank,x.norek].filter(Boolean).join(" ")+(x.an?" a.n. "+x.an:"");
+function bankOpts(){
+  const a=allRekening().map(rekLabel).filter(Boolean);
+  ["BCA","Mandiri"].forEach(b=>{if(!a.some(x=>x.toLowerCase().startsWith(b.toLowerCase())))a.push(b)});
+  return a;
+}
+function bankDefault(p){const c=invCalc(p);return c.bk.length?rekLabel(c.bk[0]):(bankOpts()[0]||"")}
+function payBankFill(p,mode){
+  const cur=(mode==="dp"?p.bankDp:p.bankLunas)||(mode!=="dp"&&p.bankDp)||bankDefault(p),o=bankOpts();if(cur&&!o.includes(cur))o.unshift(cur);
+  $("#payBank").innerHTML=o.map(v=>`<label class="chip"><input type="radio" name="payBank" value="${esc(v)}"${v===cur?" checked":""}><span>${esc(v)}</span></label>`).join("");
+}
+function fillBankSel(sel,v){const o=bankOpts();if(v&&!o.includes(v))o.unshift(v);sel.innerHTML=`<option value="">–</option>`+o.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");sel.value=v||""}
+// DP = PROFORMA INVOICE bertanggal pembayaran DP; pelunasan = INVOICE bertanggal pelunasan
+const isFinalInv=p=>N(p.lunas)>0;
+function payDateInv(p){if(isFinalInv(p)&&p.tglLunas)p.invDate=p.tglLunas;else if(N(p.dp)>0&&p.tglDp)p.invDate=p.tglDp}
+function payKind(p){const ph=phase(p);if(!["prospek","proses"].includes(ph))return "";if(!hasDp(p))return curStep(p)<=0?"dp":"";return pdOf(p)&&money(p).sisa>0?"lunas":""}
 function payBtn(p,cls){const k=payKind(p);return k?`<button class="${cls}" type="button" data-pay="${k}" data-id="${p.id}">${k==="dp"?"DP masuk":"Pelunasan"}</button>`:""}
 let payId=null,payMode="dp";
 function openPay(id,mode){
   const p=items.find(x=>x.id===id);if(!p)return;payId=id;payMode=mode;
   const f=$("#payFrm").elements,m=money(p);
   $("#payTitle").textContent=(mode==="dp"?"DP masuk · ":"Pelunasan · ")+p.nama;
-  f.pd.value=N(p.priceDeal)?N(p.priceDeal).toLocaleString("id-ID"):"";f.pd.closest("label").style.display=N(p.priceDeal)?"none":"";
-  const nominal=mode==="dp"?(N(p.priceDeal)?Math.round(N(p.priceDeal)/2):0):Math.max(0,m.sisa);
+  const g0=money(p).gross;f.pd.value="";f.pd.closest("label").style.display=g0?"none":"";
+  payBankFill(p,mode);
+  const nominal=mode==="dp"?(pdOf(p)?Math.round(pdOf(p)/2):0):Math.max(0,m.sisa);
   f.nom.value=nominal?nominal.toLocaleString("id-ID"):"";f.tgl.value=TODAY;$("#payErr").textContent="";
   $("#payLbl").textContent=mode==="dp"?"Nominal DP (Rp)":"Nominal pelunasan (Rp)";
-  $("#payInfo").textContent=mode==="dp"?(N(p.priceDeal)?"Default 50% dari price deal. Ubah kalau beda.":"Isi price deal dulu supaya invoice & sisa tagihan terhitung."):"Default sisa tagihan "+rp(m.sisa)+".";
+  $("#payInfo").textContent=mode==="dp"?(g0?"Default 50% dari price deal. Ubah kalau beda.":"Isi harga layanan dulu supaya invoice & sisa tagihan terhitung."):"Default sisa tagihan "+rp(m.sisa)+".";
   $("#payDlg").showModal();f.nom.focus();
 }
 $("#payFrm").querySelectorAll(".money").forEach(i=>i.addEventListener("input",()=>{const n=i.value.replace(/\D/g,"");i.value=n?Number(n).toLocaleString("id-ID"):""}));
 $("#payFrm").addEventListener("submit",async e=>{
   e.preventDefault();const p=items.find(x=>x.id===payId);if(!p)return;const f=e.target.elements;
-  const nom=N(f.nom.value.replace(/\D/g,"")),pd=N(p.priceDeal)||N(f.pd.value.replace(/\D/g,""));
+  const nom=N(f.nom.value.replace(/\D/g,"")),g0=money(p).gross,pd=N(f.pd.value.replace(/\D/g,""));
   if(!nom){$("#payErr").textContent="Isi nominalnya dulu.";return}
-  const np=Object.assign({},p,{updated:TODAY});delete np.status;if(!N(p.priceDeal)&&pd)np.priceDeal=pd;
+  const np=Object.assign({},p,{updated:TODAY});delete np.status;
+  // belum ada harga: jadikan 1 item invoice
+  if(!g0&&pd){const a=parseItems(p);np.invItems=JSON.stringify([{d:(a[0]&&a[0].d)||layananDesc(p.layanan,p.paket)||"Layanan",q:1,h:pd}])}
+  const bank=(document.querySelector('#payBank input:checked')||{}).value||"";
   let st=tags(p).slice();
-  if(payMode==="dp"){np.dp=nom;np.tglDp=f.tgl.value||TODAY;if(!st.some(x=>PROC.includes(x)))st.push("Waiting DP")}
-  else{np.lunas=N(p.lunas)+nom;np.tglLunas=f.tgl.value||TODAY;if(money(np).sisa<=0&&!st.includes("Lunas"))st.push("Lunas")}
-  np.statuses=st;$("#payDlg").close();await persist(np);
+  if(payMode==="dp"){np.dp=nom;np.tglDp=f.tgl.value||TODAY;np.bankDp=bank;if(!st.some(x=>PROC.includes(x)))st.push("Waiting DP")}
+  else{np.lunas=N(p.lunas)+nom;np.tglLunas=f.tgl.value||TODAY;np.bankLunas=bank;if(money(np).sisa<=0&&!st.includes("Lunas"))st.push("Lunas")}
+  np.statuses=st;np.priceDeal=money(np).net;payDateInv(np);$("#payDlg").close();await persist(np);
   toast(payMode==="dp"?`${p.nama}: DP ${rp(nom)} dicatat`:money(np).sisa<=0?`${p.nama}: lunas ✓`:`${p.nama}: pembayaran ${rp(nom)} dicatat`);
   openInvoice(p.id,payMode==="dp"?"dp":"lunas");
 });
@@ -2268,8 +2299,8 @@ function waDefault(p){
   const s=fuState(p);if(fuDue(s))return s.label;
   const ph=phase(p),m=money(p);
   if(ph==="selesai"||has(p,"Serah Terima"))return "SELESAI";
-  if(N(p.lunas)>0&&N(p.priceDeal)&&m.sisa<=0)return "TQLUNAS";
-  if(hasDp(p)&&N(p.priceDeal)&&m.sisa>0)return "TAGIH";
+  if(N(p.lunas)>0&&pdOf(p)&&m.sisa<=0)return "TQLUNAS";
+  if(hasDp(p)&&pdOf(p)&&m.sisa>0)return "TAGIH";
   if(invStage(p))return "INV";
   return s.active&&s.label?s.label:"";
 }
