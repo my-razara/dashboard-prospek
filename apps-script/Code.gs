@@ -469,7 +469,9 @@ function migrate_(ss, sh) {
   const head = vals[0].map(h => String(h == null ? '' : h).trim());
   if (last >= 2) {
     const tz = ss.getSpreadsheetTimeZone();
-    sh.copyTo(ss).setName('Cadangan Prospek ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HHmm'));
+    let nm = 'Cadangan Prospek ' + Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HHmmss'), k = 2;
+    while (ss.getSheetByName(nm)) nm = nm.replace(/ \(\d+\)$/, '') + ' (' + (k++) + ')';
+    sh.copyTo(ss).setName(nm);
   }
   const byLabel = {};
   FIELDS.forEach(f => byLabel[f[1]] = f[0]);
