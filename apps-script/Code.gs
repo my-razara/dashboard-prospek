@@ -12,6 +12,7 @@ const SHEET_DATA = 'Prospek';
 const SHEET_SET = 'Pengaturan';
 const SHEET_USER = 'Pengguna';
 const SHEET_INV = 'Brand Invoice';
+const SHEET_BUDGET = 'Budget Iklan';
 const SESSION_DAYS = 30;
 const PROC = ['Waiting DP', 'TTD Draft Akta', 'NPWP dan NIB', 'PKP', 'Waiting Lunas', 'Lunas', 'Rekening Bank', 'Serah Terima'];
 
@@ -24,7 +25,8 @@ const FIELDS = [
   ['nama', 'Nama'], ['wa', 'WhatsApp'], ['layanan', 'Layanan'], ['tahap', 'Tahap Terakhir'], ['sisa', 'Sisa Tagihan'],
   ['diskon', 'Diskon'], ['ppn', 'PPN 11%'], ['pph', 'Potong PPh'], ['retur', 'Return'],
   ['tglDp', 'Tanggal DP'], ['tglLunas', 'Tanggal Pelunasan'], ['bankDp', 'Bank DP'], ['bankLunas', 'Bank Pelunasan'], ['selesai', 'Tanggal Serah Terima'],
-  ['nilai', 'Estimasi Nilai'], ['catatan', 'Catatan'], ['followup', 'Follow-up'],
+  ['nilai', 'Estimasi Nilai'], ['catatan', 'Catatan'],
+  ['kualitas', 'Kualitas Lead'], ['alasanQ', 'Alasan Kualitas'], ['srcChat', 'Source Chat'], ['followup', 'Follow-up'],
   ['fuDone', 'Follow-up Selesai'], ['fuChoice', 'Pilihan Inbox FU'],
   ['invBrand', 'Brand Invoice'], ['invNo', 'No Invoice'], ['invDate', 'Tanggal Invoice'], ['invDue', 'Jatuh Tempo'],
   ['alamat', 'Alamat Klien'], ['email', 'Email Klien'], ['invItems', 'Rincian Invoice'], ['invNote', 'Catatan Invoice'],
@@ -159,7 +161,12 @@ function batch(token, ops) {
     const brands = readInvBrands_(ss);
     let waSet = null;
     const adsDates = {};
-    const adsMark = (sumber, created) => { const d = adsIso_(created, tz); if (ADS.map[String(sumber || '').trim()] && d) adsDates[d] = 1; };
+    const vendMonths = {};
+    const adsMark = (sumber, created) => {
+      const sb = String(sumber || '').trim(), d = adsIso_(created, tz);
+      if (ADS.map[sb] && d) adsDates[d] = 1;
+      if (d && VENDORS.some(v => v.sumber === sb)) vendMonths[sb + '|' + d.slice(0, 7)] = 1;
+    };
     const CR_I = FIELDS.findIndex(f => f[0] === 'created'), SB_I = FIELDS.findIndex(f => f[0] === 'sumber');
     const results = ops.map(op => {
       try {
@@ -205,6 +212,8 @@ function batch(token, ops) {
     const v = results.some(r => r.ok) ? bump_() : { prev: getVersion(), ver: getVersion() };
     // isi otomatis jumlah chat iklan ke spreadsheet Google Ads (gagal di sini tidak membatalkan simpan data)
     if (Object.keys(adsDates).length) { try { adsWrite_(Object.keys(adsDates)); } catch (e) { adsErr_(e); } }
+    // laporan kualitas leads ke spreadsheet vendor (Vorent / Izinin)
+    if (Object.keys(vendMonths).length) vendorSync_(Object.keys(vendMonths));
     return { results: results, prev: v.prev, ver: v.ver };
   } finally {
     lock.releaseLock();
@@ -269,7 +278,10 @@ function saveSettings(token, s) {
   lock.waitLock(15000);
   try {
     const ss = ss_();
+    // versi aplikasi lama tidak mengirim alasanQ -> pertahankan yang lama
+    if (s.alasanQ === undefined) s.alasanQ = readSettings_(ss).alasanQ;
     writeSettings_(ss.getSheetByName(SHEET_SET), s);
+    if (Array.isArray(s.budget)) writeBudget_(ss, s.budget);
     if (Array.isArray(s.invBrands)) {
       writeInvBrands_(ss.getSheetByName(SHEET_INV) || ss.insertSheet(SHEET_INV), s.invBrands);
     }
@@ -318,8 +330,32 @@ function payload_(ss, u) {
     user: { name: u.name, role: u.role, sheetUrl: u.role === 'admin' ? ss.getUrl() : '' },
     items: items,
     settings: readSettings_(ss),
+    budget: u.role === 'admin' ? readBudget_(ss) : [],
     ver: getVersion()
   };
+}
+
+// Budget iklan per bulan per brand (diisi admin di Pengaturan)
+function readBudget_(ss) {
+  const sh = ss.getSheetByName(SHEET_BUDGET);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const tz = ss.getSpreadsheetTimeZone();
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues()
+    .map(r => ({ m: r[0] instanceof Date ? Utilities.formatDate(r[0], tz, 'yyyy-MM') : String(r[0] || '').trim().replace(/^'/, '').slice(0, 7), v: Number(r[1]) || 0, i: Number(r[2]) || 0, e: Number(r[3]) || 0 }))
+    .filter(x => /^\d{4}-\d{2}$/.test(x.m));
+}
+
+function writeBudget_(ss, list) {
+  const sh = ss.getSheetByName(SHEET_BUDGET) || ss.insertSheet(SHEET_BUDGET);
+  const rows = [['Bulan', 'Vorent', 'Izinin', 'Echoffice']].concat(list
+    .filter(x => x && /^\d{4}-\d{2}$/.test(String(x.m || '')))
+    .sort((a, b) => String(a.m).localeCompare(String(b.m)))
+    .map(x => ["'" + x.m, Number(x.v) || 0, Number(x.i) || 0, Number(x.e) || 0]));
+  sh.clearContents();
+  sh.getRange(1, 1, rows.length, 4).setValues(rows);
+  sh.getRange(1, 1, 1, 4).setFontWeight('bold');
+  sh.getRange(2, 2, Math.max(1, rows.length - 1), 3).setNumberFormat('#,##0');
+  sh.setFrozenRows(1);
 }
 
 function readInvBrands_(ss) {
@@ -602,9 +638,9 @@ function toRow_(o, ex) {
 function readSettings_(ss) {
   const sh = ss.getSheetByName(SHEET_SET);
   const last = sh.getLastRow();
-  const s = { sumber: [], brands: [], pics: [], vo: [], kota: [], promoText: '', waTpl: {}, invBrands: readInvBrands_(ss) };
+  const s = { sumber: [], brands: [], pics: [], vo: [], kota: [], promoText: '', waTpl: {}, alasanQ: null, invBrands: readInvBrands_(ss) };
   if (last < 2) return s;
-  const v = sh.getRange(2, 1, last - 1, 9).getValues();
+  const v = sh.getRange(2, 1, last - 1, Math.max(9, Math.min(10, sh.getLastColumn()))).getValues();
   v.forEach(r => {
     if (r[0]) s.sumber.push({ n: String(r[0]).trim(), b: String(r[1]).trim() });
     if (r[3]) s.brands.push(String(r[3]).trim());
@@ -613,6 +649,7 @@ function readSettings_(ss) {
     if (r[6]) s.kota.push(String(r[6]).trim());
     if (r[7] && !s.promoText) s.promoText = String(r[7]).trim();
     if (r[8] && !Object.keys(s.waTpl).length) { try { s.waTpl = JSON.parse(String(r[8])) || {}; } catch (e) {} }
+    if (r[9] && !s.alasanQ) { try { s.alasanQ = JSON.parse(String(r[9])) || null; } catch (e) {} }
   });
   return s;
 }
@@ -621,15 +658,16 @@ function writeSettings_(sh, s) {
   const cols = [
     (s.sumber || []).map(x => x.n), (s.sumber || []).map(x => x.b), [],
     s.brands || [], s.pics || [], s.vo || [], s.kota || [], s.promoText ? [String(s.promoText)] : [],
-    s.waTpl && Object.keys(s.waTpl).length ? [JSON.stringify(s.waTpl)] : []
+    s.waTpl && Object.keys(s.waTpl).length ? [JSON.stringify(s.waTpl)] : [],
+    s.alasanQ ? [JSON.stringify(s.alasanQ)] : []
   ];
   const n = Math.max(1, ...cols.map(c => c.length));
-  const rows = [['Sumber', 'Brand (untuk sumber)', '', 'Daftar Brand', 'PIC', 'VO Partner', 'Kab/Kota', 'Teks Saran Promosi 1', 'Template WA (JSON)']];
+  const rows = [['Sumber', 'Brand (untuk sumber)', '', 'Daftar Brand', 'PIC', 'VO Partner', 'Kab/Kota', 'Teks Saran Promosi 1', 'Template WA (JSON)', 'Alasan Kualitas (JSON)']];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => c[i] == null ? '' : c[i]));
   sh.clearContents();
-  if (sh.getMaxColumns() < 9) sh.insertColumnsAfter(sh.getMaxColumns(), 9 - sh.getMaxColumns());
-  sh.getRange(1, 1, rows.length, 9).setValues(rows);
-  sh.getRange(1, 1, 1, 9).setFontWeight('bold');
+  if (sh.getMaxColumns() < 10) sh.insertColumnsAfter(sh.getMaxColumns(), 10 - sh.getMaxColumns());
+  sh.getRange(1, 1, rows.length, 10).setValues(rows);
+  sh.getRange(1, 1, 1, 10).setFontWeight('bold');
   sh.setFrozenRows(1);
 }
 
@@ -755,6 +793,10 @@ function adsAllDates_() {
 // dipanggil pemicu harian: hitung ulang 7 hari terakhir
 function adsNightly() {
   try { const a = adsAllDates_(); adsWrite_(a.slice(-7)); } catch (e) { adsErr_(e); }
+  // laporan vendor: bulan ini & bulan lalu (status deal / bayar bisa berubah belakangan)
+  const tz = ss_().getSpreadsheetTimeZone(), now = new Date();
+  const ms = [0, 1].map(k => Utilities.formatDate(new Date(now.getFullYear(), now.getMonth() - k, 1), tz, 'yyyy-MM'));
+  vendorSync_(VENDORS.reduce((a, v) => a.concat(ms.map(m => v.sumber + '|' + m)), []));
 }
 
 // JALANKAN SEKALI dari editor Apps Script (pilih fungsi ini lalu klik Run) untuk:
@@ -764,13 +806,24 @@ function setupGoogleAds() {
   ScriptApp.newTrigger('adsNightly').timeBased().everyDays(1).atHour(1).create();
   const n = adsWrite_(adsAllDates_());
   Logger.log('Selesai: ' + n + ' tanggal diisi di sheet ' + ADS.sheet + '. Pemicu harian jam 01.00 terpasang.');
+  // laporan kualitas leads: semua bulan sejak November
+  const tz = ss_().getSpreadsheetTimeZone(), months = {};
+  adsAllDates_().forEach(d => months[d.slice(0, 7)] = 1);
+  const res = vendorSync_(VENDORS.reduce((a, v) => a.concat(Object.keys(months).map(m => v.sumber + '|' + m)), []));
+  Logger.log('Laporan vendor: ' + JSON.stringify(res));
+  Logger.log('Isi celah Izinin 21-31 Okt: ' + vendorBackfillIzinin_());
 }
 
 // admin: isi ulang semua tanggal sejak 1 November dari aplikasi
 function adsSync(token) {
   const u = auth_(token);
   if (u.role !== 'admin') throw new Error('FORBIDDEN');
-  try { return { n: adsWrite_(adsAllDates_()) }; } catch (e) { adsErr_(e); throw e; }
+  let n = 0;
+  try { n = adsWrite_(adsAllDates_()); } catch (e) { adsErr_(e); throw e; }
+  const months = {};
+  adsAllDates_().forEach(d => months[d.slice(0, 7)] = 1);
+  const vend = vendorSync_(VENDORS.reduce((a, v) => a.concat(Object.keys(months).map(m => v.sumber + '|' + m)), []));
+  return { n: n, vendor: vend };
 }
 
 // admin: data chat & conversion per tanggal untuk kartu di Ringkasan
@@ -787,5 +840,186 @@ function adsStats(token) {
     const n = i => Number(r[i - 1]) || 0;
     rows.push([d].concat(ADS.cols.map((c, k) => [n(ctx.cols[c]), n(conv[k])]).reduce((a, x) => a.concat(x), [])));
   });
-  return { rows: rows, start: ADS.start, ok: props.getProperty('ADS_OK') || '', err: props.getProperty('ADS_ERR') || '' };
+  return { rows: rows, start: ADS.start, ok: props.getProperty('ADS_OK') || '', err: props.getProperty('ADS_ERR') || '',
+    vendor: VENDORS.map(v => ({ brand: v.brand, ok: props.getProperty('VEND_OK_' + v.brand) || '', err: props.getProperty('VEND_ERR_' + v.brand) || '' })) };
+}
+
+/* ---------------- Laporan kualitas leads untuk vendor iklan ---------------- */
+// Tabel kiri di tab bulan disusun ulang dari data aplikasi (1 baris = 1 chat dari iklan, 1 grup = 1 baris).
+// Contoh, catatan, ringkasan di sebelah kanan dan tab sebelum November tidak disentuh.
+const VENDORS = [
+  { brand: 'Vorent', sumber: 'ads-lopo', id: '1clQrRJ61ZPLiBorUKbMkmUeDsN8D6GN4LVyFNVnPuiI', deal: ['Deals', 'Belum Deal'], style: 'full' },
+  { brand: 'Izinin', sumber: 'ads-gusti', id: '1VtcUCMCFc1w-EetGloldDZy424gV_AlMOigx-miwgdk', deal: ['Deals', 'Belum Deals'], style: 'short' }
+];
+const VEND_START = '2026-11';
+const VEND_FULL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const VEND_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+const VEND_SHORT_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const VEND_HEAD = { no: 'no.', tgl: 'tanggal', keb: 'kebutuhan', kual: 'berkualitas/tidak', deal: 'deals', stat: 'stat invoice', src: 'source', alasan: 'alasan berkualitas / tidak berkualitas', notes: 'notes', kode: 'kode chat' };
+const VEND_REQ = ['no', 'tgl', 'keb', 'kual', 'deal', 'src', 'alasan', 'notes'];
+
+function vendKebutuhan_(l) {
+  return { 'Pendirian PT Perorangan': 'PT Perorangan', 'Pendirian PT PMDN': 'Pendirian PT', 'Pendirian PT PMA': 'PMA', 'Pendirian CV': 'Pendirian CV', 'Sewa Virtual Office': 'Virtual Office' }[l] || 'Others';
+}
+
+// 1 baris laporan dari 1 lead (data pemimpin grup) + status gabungan semua PT di grup
+function vendRow_(lead, group, v, tz) {
+  const st = o => (Array.isArray(o.statuses) ? o.statuses : String(o.statuses || '').split(',')).map(x => String(x).trim());
+  const paid = group.some(o => (Number(o.dp) || 0) > 0 || (Number(o.lunas) || 0) > 0);
+  const deal = paid || group.some(o => { const s = st(o); return PROC.some(x => s.indexOf(x) >= 0) || s.indexOf('Klien') >= 0; });
+  const s0 = st(lead), spam = s0.indexOf('Spam') >= 0 || lead.layanan === 'Spam';
+  const closed = s0.some(x => x === 'Lose' || x === 'Spam' || x === 'Delete');
+  const keb = vendKebutuhan_(lead.layanan);
+  const d = adsIso_(lead.created, tz);
+  return {
+    tgl: d ? new Date(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10))) : '',
+    keb: keb,
+    kual: lead.kualitas || (spam ? 'Tidak Berkualitas' : ''),
+    deal: deal ? v.deal[0] : v.deal[1],
+    stat: paid ? 'Sudah Bayar' : deal ? 'Nunggu Bayar' : closed ? 'Ghosting' : '',
+    src: lead.srcChat === 'Tanpa Keterangan' ? 'Tanpa Keterangan' : 'Ads',
+    alasan: lead.alasanQ || (spam ? 'Chat spam' : ''),
+    notes: keb === 'Others' && lead.layanan && lead.layanan !== 'Spam' && lead.layanan !== 'Lainnya' ? lead.layanan : '',
+    kode: ''
+  };
+}
+
+function vendLeads_(all, v, from, to, tz) {
+  const g = {};
+  all.forEach(o => {
+    if (String(o.sumber || '').trim() !== v.sumber) return;
+    const d = adsIso_(o.created, tz);
+    if (!d || d < from || d > to) return;
+    (g[o.grup || o.id] = g[o.grup || o.id] || []).push(o);
+  });
+  return Object.keys(g).map(k => {
+    const arr = g[k], lead = arr.find(o => o.id === k) || arr[0];
+    return { lead: lead, group: arr, d: adsIso_(lead.created, tz) };
+  }).sort((a, b) => a.d.localeCompare(b.d) || (Number(a.lead.no) || 0) - (Number(b.lead.no) || 0));
+}
+
+// cari baris judul & kolom tabel kiri berdasarkan nama judul
+function vendLayout_(sh) {
+  const lc = Math.max(sh.getLastColumn(), 1), top = sh.getRange(1, 1, Math.min(10, Math.max(sh.getLastRow(), 1)), lc).getValues();
+  for (let r = 0; r < top.length; r++) {
+    const h = top[r].map(x => String(x).trim().toLowerCase().replace(/\s+/g, ' '));
+    if (h.indexOf('tanggal') < 0 || h.indexOf('kebutuhan') < 0) continue;
+    const col = {};
+    Object.keys(VEND_HEAD).forEach(k => { const i = h.indexOf(VEND_HEAD[k]); if (i >= 0) col[k] = i + 1; });
+    // hanya tabel kiri: kolom sebelum kolom kosong pemisah
+    const gap = h.findIndex((x, i) => i > (col.notes || 1) - 1 && !x);
+    Object.keys(col).forEach(k => { if (gap >= 0 && col[k] > gap) delete col[k]; });
+    const miss = VEND_REQ.filter(k => !col[k]);
+    if (miss.length) throw new Error('Kolom ' + miss.map(k => '"' + VEND_HEAD[k] + '"').join(', ') + ' tidak ditemukan di tab ' + sh.getName());
+    return { hr: r + 1, col: col };
+  }
+  throw new Error('Judul tabel (Tanggal, Kebutuhan) tidak ditemukan di tab ' + sh.getName());
+}
+
+// tab untuk bulan tertentu; dibuat dari tab bulan sebelumnya kalau belum ada
+function vendTab_(ss, v, ym) {
+  const y = ym.slice(0, 4), m = Number(ym.slice(5, 7)) - 1, tz = ss.getSpreadsheetTimeZone();
+  const names = v.style === 'full' ? [VEND_FULL[m] + ' ' + y, VEND_FULL[m]] : [VEND_SHORT[m] + ' ' + y, VEND_SHORT_EN[m] + ' ' + y];
+  for (let i = 0; i < names.length; i++) {
+    const sh = ss.getSheetByName(names[i]);
+    if (!sh) continue;
+    if (names[i].indexOf(y) >= 0) return sh;
+    // tab tanpa tahun (mis. "November"): pastikan isinya memang tahun yang sama
+    const L = vendLayout_(sh), n = Math.max(0, sh.getLastRow() - L.hr);
+    const ds = n ? sh.getRange(L.hr + 1, L.col.tgl, n, 1).getValues().map(r => adsIso_(r[0] instanceof Date ? r[0] : vendDate_(r[0]), tz)).filter(Boolean) : [];
+    if (!ds.length || ds.every(d => d.slice(0, 4) === y)) return sh;
+  }
+  // buat tab baru dari tab bulan sebelumnya
+  let tpl = null;
+  for (let k = 1; k <= 12 && !tpl; k++) {
+    const pm = new Date(Number(y), m - k, 1), py = String(pm.getFullYear()), pmi = pm.getMonth();
+    const cand = v.style === 'full' ? [VEND_FULL[pmi] + ' ' + py, VEND_FULL[pmi]] : [VEND_SHORT[pmi] + ' ' + py, VEND_SHORT_EN[pmi] + ' ' + py];
+    cand.forEach(c => { if (!tpl) tpl = ss.getSheetByName(c); });
+  }
+  if (!tpl) throw new Error('Tab bulan ' + names[0] + ' belum ada dan tidak ada tab bulan sebelumnya untuk dicontoh');
+  const sh = tpl.copyTo(ss).setName(names[0]);
+  const L = vendLayout_(sh), n = Math.max(0, sh.getLastRow() - L.hr);
+  if (n) Object.keys(L.col).filter(k => k !== 'no').forEach(k => sh.getRange(L.hr + 1, L.col[k], n, 1).clearContent());
+  return sh;
+}
+
+// tanggal teks dd/MM/yyyy -> objek tanggal
+function vendDate_(v) {
+  const m = String(v || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])) : v;
+}
+
+function vendWriteMonth_(v, ym, all, tz) {
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('VEND_ID_' + v.brand) || v.id);
+  const sh = vendTab_(ss, v, ym), L = vendLayout_(sh), c = L.col;
+  const y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7));
+  const last = new Date(y, m, 0).getDate();
+  const leads = vendLeads_(all, v, ym + '-01', ym + '-' + ('0' + last).slice(-2), tz);
+  const rows = leads.map(x => vendRow_(x.lead, x.group, v, tz));
+  // jumlah baris yang sekarang terisi (untuk dibersihkan kalau datanya berkurang)
+  const lr = sh.getLastRow(), cur = Math.max(0, lr - L.hr);
+  let used = 0;
+  if (cur) sh.getRange(L.hr + 1, c.tgl, cur, 1).getValues().forEach((r, i) => { if (String(r[0]).trim()) used = i + 1; });
+  const total = Math.max(rows.length, used);
+  if (!total) return 0;
+  if (L.hr + total > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), L.hr + total - sh.getMaxRows());
+  const keys = Object.keys(c).filter(k => k !== 'no');
+  keys.forEach(k => {
+    const vals = [];
+    for (let i = 0; i < total; i++) vals.push([i < rows.length ? rows[i][k] : '']);
+    const rg = sh.getRange(L.hr + 1, c[k], total, 1).setValues(vals);
+    if (k === 'tgl') rg.setNumberFormat('dd/MM/yyyy');
+  });
+  // nomor urut: lanjutkan kalau baris bernomor kurang
+  const nos = sh.getRange(L.hr + 1, c.no, total, 1).getValues();
+  let fix = false;
+  nos.forEach((r, i) => { if (!String(r[0]).trim()) { r[0] = i + 1; fix = true; } });
+  if (fix) sh.getRange(L.hr + 1, c.no, total, 1).setValues(nos);
+  return rows.length;
+}
+
+// keys: ["ads-lopo|2026-11", ...]
+function vendorSync_(keys) {
+  const props = PropertiesService.getScriptProperties(), out = {};
+  const ss = ss_(), tz = ss.getSpreadsheetTimeZone();
+  let all = null;
+  VENDORS.forEach(v => {
+    const ms = keys.filter(k => k.split('|')[0] === v.sumber).map(k => k.split('|')[1]).filter(m => m >= VEND_START);
+    if (!ms.length) return;
+    try {
+      if (!all) all = readAll_(ss);
+      ms.filter((m, i) => ms.indexOf(m) === i).sort().forEach(m => { out[v.brand + ' ' + m] = vendWriteMonth_(v, m, all, tz); });
+      props.setProperty('VEND_OK_' + v.brand, new Date().toISOString());
+      props.deleteProperty('VEND_ERR_' + v.brand);
+    } catch (e) {
+      props.setProperty('VEND_ERR_' + v.brand, new Date().toISOString() + ' ' + String((e && e.message) || e));
+      out[v.brand] = 'GAGAL: ' + String((e && e.message) || e);
+    }
+  });
+  return out;
+}
+
+// sekali saja: isi celah Izinin 21-31 Okt 2026 di tab "SEP - OKT 2026" (baris lama tidak disentuh)
+function vendorBackfillIzinin_() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('IZN_BACKFILL')) return 'sudah pernah';
+  const v = VENDORS.find(x => x.brand === 'Izinin');
+  const ss = SpreadsheetApp.openById(props.getProperty('VEND_ID_Izinin') || v.id);
+  const sh = ss.getSheetByName('SEP - OKT 2026');
+  if (!sh) return 'tab SEP - OKT 2026 tidak ada';
+  const src = ss_(), tz = src.getSpreadsheetTimeZone();
+  const L = vendLayout_(sh), c = L.col;
+  const leads = vendLeads_(readAll_(src), v, '2026-10-21', '2026-10-31', tz);
+  const n = Math.max(0, sh.getLastRow() - L.hr);
+  let used = 0;
+  if (n) sh.getRange(L.hr + 1, c.tgl, n, 1).getValues().forEach((r, i) => { if (String(r[0]).trim()) used = i + 1; });
+  leads.forEach((x, i) => {
+    const r = vendRow_(x.lead, x.group, v, tz), row = L.hr + used + 1 + i;
+    if (row > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 10);
+    Object.keys(c).forEach(k => { if (k !== 'no') sh.getRange(row, c[k]).setValue(r[k]); });
+    sh.getRange(row, c.tgl).setNumberFormat('dd/MM/yyyy');
+    if (!String(sh.getRange(row, c.no).getValue()).trim()) sh.getRange(row, c.no).setValue(used + 1 + i);
+  });
+  props.setProperty('IZN_BACKFILL', new Date().toISOString());
+  return leads.length + ' baris ditambahkan';
 }

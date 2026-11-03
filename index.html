@@ -321,7 +321,23 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .qbar .hint{color:var(--accent-ink);font-weight:600}
 #qNote[hidden]+#qToggle{margin-left:auto}
 .tugas .card{margin-bottom:16px}
-.tg-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.tg-sum{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.tgs.lq b{color:var(--accent-ink)}
+#lqSec[hidden]{display:none}
+#lqSec input[name="alasanQ"],#lqText{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--ink);box-sizing:border-box}
+.lq-seg{display:flex;gap:6px;flex-wrap:wrap}
+.lq-seg button{flex:1 1 auto;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-weight:600;font-size:13px;color:var(--ink-2);cursor:pointer}
+.lq-seg button.on{background:var(--btn);border-color:var(--btn);color:#fff}
+.lq-seg button.on[data-q="Tidak Berkualitas"]{background:var(--lost);border-color:var(--lost)}
+.lq-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.lq-chips button{border:1px dashed var(--line);background:var(--panel);border-radius:999px;padding:5px 10px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.lq-chips button.no{border-color:color-mix(in srgb,var(--lost) 45%,var(--line))}
+.lq-chips button:hover{border-style:solid}
+.lq-g{font-size:11.5px;font-weight:700;color:var(--ink-3);width:100%;margin-top:2px}
+.bud-t{width:100%;border-collapse:collapse;font-size:13px}
+.bud-t th{text-align:left;font-size:12px;color:var(--ink-3);font-weight:600;padding:4px 6px}
+.bud-t td{padding:3px 6px}
+.bud-t input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;font-size:13px;color:var(--ink)}
 .tgs{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
 .tgs b{font-size:26px;font-weight:800;line-height:1.1}
 .tgs span{font-size:13px;color:var(--ink-2);font-weight:600}
@@ -331,7 +347,7 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .inv-btn.pay{background:var(--btn);color:#fff;border-color:var(--btn)}
 .mc .r3 .acts:has(.pay){grid-template-columns:1fr 1fr 1fr}
 dialog.paydlg{width:min(460px,94vw)}
-@media (max-width:767px){.tg-sum{grid-template-columns:repeat(2,1fr);gap:10px}.tgs b{font-size:22px}
+@media (max-width:767px){.tg-sum{grid-template-columns:repeat(2,1fr);gap:10px}.tgs.lq{grid-column:span 2}.tgs b{font-size:22px}
   dialog.paydlg.paydlg{width:100vw;max-width:100vw;height:auto;max-height:90dvh;margin:auto 0 0;border-radius:18px 18px 0 0}
   dialog.paydlg.paydlg form{height:auto}}
 .themeBtn .ic-sun,.themeBtn .ic-moon{display:none}
@@ -789,6 +805,7 @@ dialog .mb{overflow-x:hidden}
     <div class="card"><h3>Follow-up jatuh tempo <span><small id="tgFuN"></small> <button type="button" class="lnk" data-go="fu">Semua follow-up →</button></span></h3><ul class="fu" id="tgFu"></ul></div>
     <div class="card"><h3>Waiting DP, belum bayar <small id="tgDpN"></small></h3><ul class="fu" id="tgDp"></ul></div>
     <div class="card"><h3>Tagihan lewat jatuh tempo <small id="tgDueN"></small></h3><ul class="fu" id="tgDue"></ul></div>
+    <div class="card"><h3>Lead iklan belum dinilai <small id="tgLqN"></small></h3><ul class="fu" id="tgLq"></ul></div>
   </section>
   <section class="kpis" id="kpis" data-mv="home"></section>
   <section class="kpis fin" id="fin" data-mv="home"></section>
@@ -797,7 +814,7 @@ dialog .mb{overflow-x:hidden}
     <div class="card"><h3>Follow-up hari ini <button type="button" class="lnk" data-go="fu">Lihat semua →</button></h3><ul class="fu" id="homeFu"></ul></div>
   </section>
   <section class="card adsc" id="adsCard" data-mv="home" hidden>
-    <h3><span>Chat vs Conversion Google Ads <small id="adsSub"></small></span><button type="button" class="btn sm" id="adsSyncBtn">Sinkron ulang sheet WA</button></h3>
+    <h3><span>Google Ads: leads, kualitas & biaya <small id="adsSub"></small></span><button type="button" class="btn sm" id="adsSyncBtn">Sinkron ulang sheet WA & vendor</button></h3>
     <div id="adsBody"><p class="co">Memuat data Google Ads…</p></div>
   </section>
 
@@ -906,6 +923,13 @@ dialog .mb{overflow-x:hidden}
 
         </div>
       </div>
+      <div class="sec" id="lqSec" hidden><h4>Laporan iklan <span class="hint">(tidak wajib · untuk laporan vendor iklan)</span></h4>
+        <input type="hidden" name="kualitas">
+        <div class="lq-seg" id="lqSeg"><button type="button" data-q="">Belum dinilai</button><button type="button" data-q="Berkualitas">Berkualitas</button><button type="button" data-q="Tidak Berkualitas">Tidak berkualitas</button></div>
+        <div class="lq-chips" id="lqChips"></div>
+        <input name="alasanQ" placeholder="Alasan singkat, mis. Sedang isi form" autocomplete="off" style="width:100%" aria-label="Alasan kualitas lead">
+        <label class="mchk" style="margin-top:8px"><input type="checkbox" name="srcTanpa"> Chat pertama tidak pakai template iklan <span class="hint">(Source: Tanpa Keterangan)</span></label>
+      </div>
       <div class="sec qh"><h4>Status <span class="hint">(boleh pilih lebih dari satu)</span></h4><div id="statusChips"></div></div>
       <div class="sec qh"><h4>Invoice</h4>
         <div class="form">
@@ -965,6 +989,14 @@ dialog .mb{overflow-x:hidden}
           <div class="kat" id="tplSeg"></div>
           <textarea id="tplText" rows="6" style="width:100%" aria-label="Isi template"></textarea>
           <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span class="hint" id="tplNote"></span><button class="btn sm" type="button" id="tplReset">Pakai template bawaan</button></div>
+        </div>
+        <div class="full sec"><h4>Laporan iklan</h4>
+          <p class="hint" style="margin:0 0 8px">Pilihan cepat alasan kualitas lead (satu per baris), dan budget iklan per bulan untuk menghitung cost per lead di Ringkasan.</p>
+          <div class="form" style="grid-template-columns:1fr 1fr">
+            <label>Alasan berkualitas<textarea id="setLqOk" rows="5"></textarea></label>
+            <label>Alasan tidak berkualitas<textarea id="setLqNo" rows="5"></textarea></label>
+          </div>
+          <div style="overflow-x:auto;margin-top:10px"><table class="bud-t"><thead><tr><th>Bulan</th><th>Vorent (Rp)</th><th>Izinin (Rp)</th><th>Echoffice (Rp)</th></tr></thead><tbody id="budRows"></tbody></table></div>
         </div>
         <div class="full sec"><h4>Saran promosi 1</h4><input id="setPromo" placeholder="Tanya pak Heru" style="width:100%"><div class="hint">Tulisan yang muncul saat memilih "Saran promosi 1" di Inbox follow-up.</div></div>
         <div class="full sec"><h4>Profil brand invoice</h4>
@@ -1038,6 +1070,18 @@ dialog .mb{overflow-x:hidden}
     <p class="hint" style="margin:6px 0 0">Pesan bisa diubah dulu sebelum dikirim. Template diatur admin di Pengaturan.</p>
   </div>
   <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" id="waCopy">Salin</button><a class="btn primary wa-go" id="waGo" href="#" target="_blank" rel="noopener">Buka WhatsApp</a></div></div>
+</dialog>
+<dialog id="lqDlg" class="paydlg" aria-labelledby="lqTtl">
+  <form id="lqFrm" novalidate>
+    <div class="mh"><h2 id="lqTtl">Nilai lead</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+    <div class="mb">
+      <div class="lq-seg" id="lqSeg2"><button type="button" data-q="Berkualitas">Berkualitas</button><button type="button" data-q="Tidak Berkualitas">Tidak berkualitas</button></div>
+      <div class="lq-chips" id="lqChips2"></div>
+      <input id="lqText" placeholder="Alasan singkat" autocomplete="off" style="width:100%" aria-label="Alasan">
+      <label class="mchk" style="margin-top:8px"><input type="checkbox" id="lqTanpa"> Chat pertama tidak pakai template iklan</label>
+    </div>
+    <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn primary" type="submit">Simpan</button></div></div>
+  </form>
 </dialog>
 <div class="login" id="login" hidden>
   <form id="loginFrm" novalidate>
@@ -1326,7 +1370,7 @@ async function sync(){
   }finally{syncing=false;syncState();if(queue.length&&!lastErr&&token)scheduleSync(300)}
 }
 function loadData(d){
-  user=d.user;serverItems=d.items||[];settings=Object.assign({sumber:[],brands:[],pics:[],vo:[],kota:[],invBrands:[],waTpl:{}},d.settings);localVer=d.ver||"0";
+  user=d.user;serverItems=d.items||[];settings=Object.assign({sumber:[],brands:[],pics:[],vo:[],kota:[],invBrands:[],waTpl:{}},d.settings);settings.budget=d.budget||[];localVer=d.ver||"0";
   items=applyQueue(serverItems);saveLocal();applyRole();applySettings();render();
 }
 function applyRole(){
@@ -1622,10 +1666,12 @@ function render(){
   $("#tgFu").innerHTML=due.length?due.map(p=>{const s=fuState(p),d=dd(s.date);return li(p,`<span class="fuc due">${esc(s.label)}</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}`,waB(p,s.label,"WA "+esc(s.label))+`<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button>`)}).join(""):none("Semua follow-up hari ini beres. Mantap!");
   $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${pdOf(p)?`<small>Deal ${rpS(pdOf(p))}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
   $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p,"","WA","TAGIH")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
-  [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
+  const lqP=lqPending(B).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
+  $("#tgLq").innerHTML=lqP.length?lqP.slice(0,30).map(p=>li(p,`<small>${esc(p.sumber)}</small><small class="co">masuk ${fmtD(p.created)}</small>`,`<button class="btn sm" type="button" data-lq="Tidak Berkualitas" data-id="${p.id}">Tidak</button><button class="btn sm primary" type="button" data-lq="Berkualitas" data-id="${p.id}">Berkualitas</button>`)).join("")+(lqP.length>30?`<li class="empty">+${lqP.length-30} lainnya</li>`:""):none("Semua lead iklan sudah dinilai.");
+  [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue],["#tgLqN",lqP]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
   const tgN=ib.length+due.length+dpWait.length+overdue.length;
   $("#tgBadge").textContent=$("#tgBadgeS").textContent=tgN?(tgN>99?"99+":tgN):"";
-  $("#tgSum").innerHTML=[["Inbox",ib.length,"ib"],["Follow-up",due.length,"due"],["Waiting DP",dpWait.length,"wdp"],["Tagihan telat",overdue.length,"bad"]].map(([l,n,c])=>`<div class="tgs ${c}${n?"":" zero"}"><b class="num">${n}</b><span>${l}</span></div>`).join("");
+  $("#tgSum").innerHTML=[["Inbox",ib.length,"ib"],["Follow-up",due.length,"due"],["Waiting DP",dpWait.length,"wdp"],["Tagihan telat",overdue.length,"bad"],["Lead belum dinilai",lqP.length,"lq"]].map(([l,n,c])=>`<div class="tgs ${c}${n?"":" zero"}"><b class="num">${n}</b><span>${l}</span></div>`).join("");
 
   // sebaran
   const g={};B.forEach(p=>{const k=groupBy==="brand"?brandOf(p):(p[groupBy]||"–");g[k]=g[k]||{n:0,c:0,l:0};g[k].n++;if(isClient(p))g[k].c++;if(phase(p)==="lose")g[k].l++});
@@ -1709,6 +1755,7 @@ document.addEventListener("click",async e=>{
   const fb=e.target.closest("[data-fu]");if(fb){markFu(fb.dataset.fu);return}
   const fc=e.target.closest("[data-fuch]");if(fc){chooseFu(fc.dataset.id,fc.dataset.fuch);return}
   const gb=e.target.closest("[data-grp]");if(gb){$("#q").value=gb.dataset.grp;tab="semua";render();setView("list");toast("Menampilkan semua PT dalam grup");return}
+  const lq=e.target.closest("[data-lq]");if(lq){openLq(lq.dataset.id,lq.dataset.lq);return}
   const pb=e.target.closest("[data-pay]");if(pb){openPay(pb.dataset.id,pb.dataset.pay);return}
   const iv=e.target.closest("[data-inv]");if(iv){openInvoice(iv.dataset.inv);return}
   const px=e.target.closest("[data-proxy]");if(px){if($("#moreDlg").open)$("#moreDlg").close();const t=$(px.dataset.proxy);if(t)t.click();return}
@@ -1759,6 +1806,7 @@ function setSumberField(v){
 }
 F.sumber.addEventListener("change",()=>{if(isOtherSrc())setTimeout(()=>F.sumberLain.focus(),0)});
 F.sumber.addEventListener("change",updBrand);
+F.sumber.addEventListener("change",()=>lqVis());
 // PIC memilih sumber sendiri -> saran Repeat otomatis tidak menimpa pilihannya
 let sumberTouched=false,repAuto=null;
 F.sumber.addEventListener("change",()=>{sumberTouched=true;repAuto=null;if(typeof paintDup==="function")paintDup()});
@@ -1784,6 +1832,7 @@ function openForm(id){
   setSumberField(d.sumber||"");
   ["nilai","priceDeal","diskon","dp","lunas","pph","retur"].forEach(k=>setMoney(k,d[k]));
   fillBankSel(F.bankDp,d.bankDp||"");fillBankSel(F.bankLunas,d.bankLunas||"");
+  F.alasanQ.value=d.alasanQ||"";F.srcTanpa.checked=d.srcChat==="Tanpa Keterangan";lqSet(d.kualitas||"");lqVis();
   setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");updPaket(d.paket||"");updBrand();
   const s=tags(d);frm.querySelectorAll('input[name="stat"]').forEach(c=>c.checked=s.includes(c.value));
   showAutoWeek();
@@ -1815,13 +1864,15 @@ frm.addEventListener("submit",async e=>{
   const p=Object.assign({id:editingId||("p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     nama:v("nama"),perusahaan:v("perusahaan"),wa:v("wa"),sumber:sumberVal(),brand:src?src.b:(brFromInv||(prev&&prev.brand)||""),pic:isAdmin()?v("pic"):user.name,
     bulan:(v("created")||TODAY).slice(0,7),minggu:weekOf(v("created")||TODAY),layanan:v("layanan"),paket:Array.isArray(paketFor(v("layanan")))?v("paket"):v("paketManual"),vo:v("vo"),kota:v("kota"),created:v("created")||TODAY,
-    nilai:moneyVal("nilai"),statuses:st,tglDp:v("tglDp"),tglLunas:v("tglLunas"),bankDp:v("bankDp"),bankLunas:v("bankLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
+    nilai:moneyVal("nilai"),statuses:st,kualitas:prev?prev.kualitas||"":"",alasanQ:prev?prev.alasanQ||"":"",srcChat:prev?prev.srcChat||"":"",tglDp:v("tglDp"),tglLunas:v("tglLunas"),bankDp:v("bankDp"),bankLunas:v("bankLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
   p.selesai=st.includes("Serah Terima")?((prev&&prev.selesai)||TODAY):"";
   // follow-up sepenuhnya otomatis: nilai lama dipertahankan
   Object.assign(p,invFormRead(),{fuDone:prev?prev.fuDone||"":"",fuChoice:prev?prev.fuChoice||"":"",grup:prev?prev.grup||"":""});
   // DP sudah diisi -> status Waiting DP otomatis tercentang (supaya alur & nomor invoice ikut jalan)
   if(hasDp(p)&&!p.statuses.some(x=>PROC.includes(x)))p.statuses.push("Waiting DP");
   p.priceDeal=money(p).net;payDateInv(p);
+  if(lqOn()){p.kualitas=F.kualitas.value;p.alasanQ=v("alasanQ");p.srcChat=F.srcTanpa.checked?"Tanpa Keterangan":""}
+  if((st.includes("Spam")||p.layanan==="Spam")&&!p.kualitas){p.kualitas="Tidak Berkualitas";if(!p.alasanQ)p.alasanQ="Chat spam"}
   if(multi){
     // 1 grup: data pertama = pemimpin grup (dipakai untuk follow-up), sisanya anggota
     p.perusahaan=pts[0];p.grup=p.id;
@@ -1869,6 +1920,7 @@ $("#setBtn").onclick=()=>{
   const w=$("#srcRows");w.innerHTML="";settings.sumber.forEach(s=>w.appendChild(srcRow(s)));
   $("#setPromo").value=settings.promoText||"";
   tplData=Object.assign({},settings.waTpl||{});tplShow("FU1");
+  $("#setLqOk").value=lqList("ok").join("\n");$("#setLqNo").value=lqList("no").join("\n");budFill();
   ibData=Object.fromEntries(INV_BRANDS.map(b=>[b,Object.assign({},invProfile(b))]));ibShow(INV_BRANDS[0]);setDlg.showModal()};
 $("#addSrc").onclick=()=>{const b=$("#setBrands").value.split("\n").map(x=>x.trim()).filter(Boolean);const r=srcRow({n:"",b:b[0]||""});$("#srcRows").appendChild(r);r.querySelector("input").focus()};
 $("#setFrm").addEventListener("submit",async e=>{
@@ -1877,7 +1929,7 @@ $("#setFrm").addEventListener("submit",async e=>{
   const sumber=[...document.querySelectorAll("#srcRows .srow")].map(r=>({n:r.querySelector("input").value.trim(),b:r.querySelector("select").value})).filter(s=>s.n);
   const names=sumber.map(s=>s.n);if(new Set(names).size!==names.length){$("#setErr").textContent="Ada nama sumber yang dobel. Pakai nama yang berbeda.";return}
   ibSave();
-  const s={sumber,brands:lines("#setBrands"),pics:lines("#setPics"),vo:lines("#setVo"),kota:lines("#setKota"),promoText:$("#setPromo").value.trim(),waTpl:(tplSave(),Object.fromEntries(Object.entries(tplData).filter(([k,v])=>v&&v.trim()&&v.trim()!==WA_TPL_DEF[k]))),invBrands:INV_BRANDS.map(b=>Object.assign({},ibData[b],{brand:b}))};
+  const s={sumber,brands:lines("#setBrands"),pics:lines("#setPics"),vo:lines("#setVo"),kota:lines("#setKota"),promoText:$("#setPromo").value.trim(),waTpl:(tplSave(),Object.fromEntries(Object.entries(tplData).filter(([k,v])=>v&&v.trim()&&v.trim()!==WA_TPL_DEF[k]))),invBrands:INV_BRANDS.map(b=>Object.assign({},ibData[b],{brand:b})),alasanQ:{ok:lines("#setLqOk"),no:lines("#setLqNo")},budget:budRead()};
   if(!s.brands.length||!s.pics.length||!s.sumber.length){$("#setErr").textContent="Brand, PIC, dan sumber masing-masing minimal satu.";return}
   try{await persistSettings(s);setDlg.close();toast("Pengaturan disimpan")}catch(err){const m=String(err&&err.message||"");$("#setErr").textContent=m.includes("OFFLINE")?"Mengubah pengaturan butuh koneksi internet.":m.includes("FORBIDDEN")?"Hanya admin yang bisa mengubah pengaturan.":"Gagal menyimpan pengaturan. Coba lagi."}
 });
@@ -2257,6 +2309,43 @@ function shrinkImg(file){
 }
 $("#ibLogo").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{ibSave();ibData[ibCur].logo=await shrinkImg(f);ibShow(ibCur)}catch(err){$("#setErr").textContent="Logo gagal dibaca. Coba file PNG atau JPG lain."}};
 
+// ---------- kualitas lead (laporan vendor iklan) ----------
+const LQ_DEF={ok:["Masih konsultasi","Sedang isi form","Menunggu rekan/pengurus","Menunggu alamat/nama PT","Mau datang ke kantor","Minta penawaran"],no:["Tidak merespons kembali","Sudah dapat di tempat lain","Bank/vendor nawarin kerja sama","Chat spam","Di luar layanan kami","Lokasi VO tidak tersedia"]};
+const LQ_START="2026-11-01";
+const lqList=k=>{const a=settings.alasanQ&&Array.isArray(settings.alasanQ[k])?settings.alasanQ[k]:null;return a&&a.length?a:LQ_DEF[k]};
+const isAdsSrc=v=>Object.prototype.hasOwnProperty.call(ADS_SRC,v||"");
+const lqOn=()=>isAdsSrc(sumberVal());
+function lqVis(){$("#lqSec").hidden=!lqOn()}
+function lqChipsHTML(q){
+  const b=(k,cls)=>lqList(k).map(t=>`<button type="button" class="${cls}" data-lqk="${k==="ok"?"Berkualitas":"Tidak Berkualitas"}" data-lqt="${esc(t)}">${esc(t)}</button>`).join("");
+  if(q==="Berkualitas")return b("ok","");if(q==="Tidak Berkualitas")return b("no","no");
+  return `<span class="lq-g">Berkualitas</span>${b("ok","")}<span class="lq-g">Tidak berkualitas</span>${b("no","no")}`;
+}
+function lqSet(q){F.kualitas.value=q;document.querySelectorAll("#lqSeg button").forEach(x=>x.classList.toggle("on",x.dataset.q===q));$("#lqChips").innerHTML=lqChipsHTML(q)}
+$("#lqSeg").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(b)lqSet(b.dataset.q)});
+$("#lqChips").addEventListener("click",e=>{const b=e.target.closest("[data-lqt]");if(!b)return;if(F.kualitas.value!==b.dataset.lqk)lqSet(b.dataset.lqk);F.alasanQ.value=b.dataset.lqt});
+// dialog cepat dari Tugas hari ini
+let lqId=null,lqQ="";
+function lqDlgSet(q){lqQ=q;document.querySelectorAll("#lqSeg2 button").forEach(x=>x.classList.toggle("on",x.dataset.q===q));$("#lqChips2").innerHTML=lqChipsHTML(q)}
+function openLq(id,q){const p=items.find(x=>x.id===id);if(!p)return;lqId=id;$("#lqTtl").textContent="Nilai lead · "+p.nama;$("#lqText").value=p.alasanQ||"";$("#lqTanpa").checked=p.srcChat==="Tanpa Keterangan";lqDlgSet(q);$("#lqDlg").showModal()}
+$("#lqSeg2").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(b)lqDlgSet(b.dataset.q)});
+$("#lqChips2").addEventListener("click",e=>{const b=e.target.closest("[data-lqt]");if(!b)return;lqDlgSet(b.dataset.lqk);$("#lqText").value=b.dataset.lqt});
+$("#lqFrm").addEventListener("submit",async e=>{
+  e.preventDefault();const p=items.find(x=>x.id===lqId);if(!p)return;
+  const upd={kualitas:lqQ,alasanQ:$("#lqText").value.trim(),srcChat:$("#lqTanpa").checked?"Tanpa Keterangan":"",updated:TODAY};
+  $("#lqDlg").close();
+  // 1 grup = 1 lead: semua PT di grup ikut
+  for(const x of groupOf(p)){const np=Object.assign({},x,upd);delete np.status;await persist(np)}
+  toast(`${p.nama}: ${lqQ==="Berkualitas"?"berkualitas":"tidak berkualitas"} ✓`);
+});
+function lqPending(list){return list.filter(p=>isAdsSrc(p.sumber)&&!isMember(p)&&!p.kualitas&&String(p.created||"")>=LQ_START&&String(p.created||"")<TODAY&&!has(p,"Spam")&&p.layanan!=="Spam"&&!has(p,"Delete"))}
+// budget iklan di Pengaturan
+function budMonths(){const ms=new Set();let d=new Date(2026,10,1);const end=new Date(+TODAY.slice(0,4),+TODAY.slice(5,7),1);while(d<=end){ms.add(iso(d.getTime()).slice(0,7));d=new Date(d.getFullYear(),d.getMonth()+1,1)}(settings.budget||[]).forEach(b=>ms.add(b.m));return [...ms].sort().reverse()}
+function budFill(){const B=settings.budget||[],f=n=>N(n)?N(n).toLocaleString("id-ID"):"";
+  $("#budRows").innerHTML=budMonths().map(m=>{const b=B.find(x=>x.m===m)||{};return `<tr data-m="${m}"><td>${esc(ymLabel(m))}</td>${["v","i","e"].map(k=>`<td><input class="money" inputmode="numeric" data-k="${k}" value="${f(b[k])}" placeholder="0" aria-label="Budget ${k} ${m}"></td>`).join("")}</tr>`}).join("");
+  $("#budRows").querySelectorAll(".money").forEach(i=>i.addEventListener("input",()=>{const n=i.value.replace(/\D/g,"");i.value=n?Number(n).toLocaleString("id-ID"):""}))}
+function budRead(){return [...document.querySelectorAll("#budRows tr")].map(r=>{const o={m:r.dataset.m};r.querySelectorAll("input").forEach(i=>o[i.dataset.k]=N(i.value.replace(/\D/g,"")));return o}).filter(o=>o.v||o.i||o.e)}
+
 // ---------- Chat vs Conversion Google Ads (admin) ----------
 const ADS_SRC={"ads-lopo":0,"ads-gusti":1,"ads-echo":2},ADS_BR=["Vorent","Izinin","Echoffice"];
 let adsData=null,adsAt=0,adsBusy=false,adsErrTxt="";
@@ -2280,13 +2369,25 @@ function renderAds(){
   const seen=new Set(rows.map(r=>r[0]));Object.keys(appChat).forEach(k=>{const d=k.split("|")[0];if(!seen.has(d)&&periodOk({created:d})){seen.add(d);days.push({d,chat:[0,1,2].map(b=>appChat[d+"|"+b]?appChat[d+"|"+b].size:0),conv:[0,0,0]})}});
   days.sort((a,b)=>a.d.localeCompare(b.d));
   const sum=(k,b)=>days.reduce((a,x)=>a+x[k][b],0);
-  const cl=[0,1,2].map(b=>{const P=items.filter(p=>ADS_SRC[p.sumber]===b&&periodOk(p)&&paidRec(p));return {n:new Set(P.map(leadKey)).size,v:P.reduce((a,p)=>a+pdOf(p),0)}});
-  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"–";
-  const line=(l,ch,cv,c)=>`<tr${l==="Total"?' class="tot"':""}><td>${l}</td><td>${ch}</td><td>${cv}</td><td>${pct(ch,cv)}</td><td>${c.n}</td><td>${pct(c.n,ch)}</td><td>${rpS(c.v)}</td></tr>`;
-  const T={ch:0,cv:0,n:0,v:0};
-  let h=`<div class="ads-wrap"><table class="ads-t"><thead><tr><th>Brand</th><th>Chat</th><th>Conversion</th><th>Chat / conv</th><th>Closing</th><th>Closing rate</th><th>Omzet</th></tr></thead><tbody>`;
-  [0,1,2].forEach(b=>{const ch=sum("chat",b),cv=sum("conv",b);T.ch+=ch;T.cv+=cv;T.n+=cl[b].n;T.v+=cl[b].v;h+=line(ADS_BR[b],ch,cv,cl[b])});
-  h+=line("Total",T.ch,T.cv,T)+`</tbody></table></div>`;
+  // kualitas & deal per lead (1 grup = 1 lead) dari aplikasi
+  const isDeal=p=>paidRec(p)||curStep(p)>=0||has(p,"Klien");
+  const Q=[0,1,2].map(b=>{const g={};items.forEach(p=>{if(ADS_SRC[p.sumber]!==b||!periodOk(p))return;(g[leadKey(p)]=g[leadKey(p)]||[]).push(p)});
+    const L=Object.values(g).map(a=>{const lead=a.find(x=>x.id===leadKey(x))||a[0];const spam=has(lead,"Spam")||lead.layanan==="Spam";return {q:lead.kualitas||(spam?"Tidak Berkualitas":""),deal:a.some(isDeal),v:a.filter(isDeal).reduce((s,x)=>s+pdOf(x),0)}});
+    return {ok:L.filter(x=>x.q==="Berkualitas").length,no:L.filter(x=>x.q==="Tidak Berkualitas").length,na:L.filter(x=>!x.q).length,deal:L.filter(x=>x.deal).length,v:L.reduce((s,x)=>s+x.v,0)}});
+  // budget periode: dibagi rata per hari dalam bulannya
+  const B=settings.budget||[],bk=["v","i","e"];
+  const dim=m=>new Date(+m.slice(0,4),+m.slice(5,7),0).getDate();
+  const bud=[0,1,2].map(b=>days.reduce((a,x)=>{const r=B.find(y=>y.m===x.d.slice(0,7));return a+(r?N(r[bk[b]])/dim(x.d.slice(0,7)):0)},0));
+  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"–",per=(a,b)=>a&&b?rpS(Math.round(a/b)):"–";
+  const T={cv:0,ch:0,ok:0,no:0,na:0,deal:0,v:0,bud:0},R=[];
+  [0,1,2].forEach(b=>{const r={l:ADS_BR[b],cv:sum("conv",b),ch:sum("chat",b),ok:Q[b].ok,no:Q[b].no,na:Q[b].na,deal:Q[b].deal,v:Q[b].v,bud:bud[b]};Object.keys(T).forEach(k=>T[k]+=r[k]);R.push(r)});
+  R.push(Object.assign({l:"Total"},T));
+  const tr=(r,cells)=>`<tr${r.l==="Total"?' class="tot"':""}><td>${r.l}</td>${cells.map(c=>`<td>${c}</td>`).join("")}</tr>`;
+  let h=`<div class="ads-wrap"><table class="ads-t"><thead><tr><th>Brand</th><th>Conversion</th><th>Real leads</th><th>Real leads rate</th><th>Quality</th><th>Unquality</th><th>Belum dinilai</th><th>Quality rate</th><th>Deal</th><th>Order rate</th><th>Omzet</th></tr></thead><tbody>`
+    +R.map(r=>tr(r,[r.cv,r.ch,pct(r.ch,r.cv),r.ok,r.no,r.na,pct(r.ok,r.ok+r.no+r.na),r.deal,pct(r.deal,r.ok),rpS(r.v)])).join("")+`</tbody></table></div>`;
+  h+=`<h4 style="margin:16px 0 6px;font-size:14px">Biaya iklan</h4><div class="ads-wrap"><table class="ads-t"><thead><tr><th>Brand</th><th>Budget</th><th>Cost / conversion</th><th>Cost / real lead</th><th>Cost / quality lead</th><th>Cost / deal</th></tr></thead><tbody>`
+    +R.map(r=>tr(r,[r.bud?rpS(Math.round(r.bud)):"–",per(r.bud,r.cv),per(r.bud,r.ch),per(r.bud,r.ok),per(r.bud,r.deal)])).join("")+`</tbody></table></div>`;
+  if(!B.length)h+=`<div class="ads-note">Isi budget iklan per bulan di Pengaturan → Laporan iklan supaya biaya per lead terhitung.</div>`;
   // grafik harian (maks 62 hari)
   const D=days.slice(-62);
   if(D.length>1){
@@ -2297,16 +2398,17 @@ function renderAds(){
     g+=`<line x1="${pad}" x2="${W-pad}" y1="${H-pad}" y2="${H-pad}" stroke="var(--line)"/>`;
     h+=`<div class="ads-ch"><div class="ads-lg" style="justify-content:space-between;margin:0 0 4px"><span>Per hari · maks ${mx}</span></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Chat dan conversion per hari">${g}</svg><div class="ads-lg" style="justify-content:space-between"><span>${fmtD(D[0].d)}</span><span>${fmtD(D[D.length-1].d)}</span></div><div class="ads-lg"><span><i style="background:var(--btn)"></i>Chat</span><span><i style="background:var(--amber)"></i>Conversion</span></div></div>`;
   }
-  h+=`<div class="ads-note">Chat sejak ${fmtDY(start)} dihitung dari aplikasi (semua chat sumber ads, 1 grup = 1 chat), sebelumnya dari sheet WA. Conversion dari kolom Conv sheet WA. Closing = chat iklan yang sudah DP / klien.</div>`;
+  h+=`<div class="ads-note">Chat sejak ${fmtDY(start)} dihitung dari aplikasi (semua chat sumber ads, 1 grup = 1 chat), sebelumnya dari sheet WA. Conversion dari kolom Conv sheet WA. Quality / Unquality / Deal dihitung dari data aplikasi (1 grup = 1 lead, Deal = sudah Waiting DP / bayar / klien). Budget periode dihitung per hari dari budget bulanan.</div>`;
   if(adsData.err)h+=`<p class="ads-err">Terakhir gagal menulis ke sheet WA: ${esc(adsData.err)}</p>`;
+  (adsData.vendor||[]).forEach(v=>{if(v.err)h+=`<p class="ads-err">Laporan vendor ${esc(v.brand)} gagal ditulis: ${esc(v.err)}</p>`});
   if(adsErrTxt)h+=`<p class="ads-err">${esc(adsErrTxt)}</p>`;
   $("#adsSub").textContent=adsData.ok?"· sheet WA terisi "+new Date(adsData.ok).toLocaleString("id-ID",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
   $("#adsBody").innerHTML=h;
 }
 $("#adsSyncBtn").onclick=async()=>{const b=$("#adsSyncBtn");b.disabled=true;b.textContent="Menyinkronkan…";
-  try{const r=await call("adsSync");toast(`Sheet WA diisi ulang (${r.n} tanggal)`);await loadAds(true)}
+  try{const r=await call("adsSync");toast(`Sheet WA & laporan vendor diisi ulang (${r.n} tanggal)`);await loadAds(true)}
   catch(e){toast(e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy":"Gagal: "+(e.message||"coba lagi"))}
-  finally{b.disabled=false;b.textContent="Sinkron ulang sheet WA"}};
+  finally{b.disabled=false;b.textContent="Sinkron ulang sheet WA & vendor"}};
 
 // ---------- mode siang / malam ----------
 const darkMQ=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
