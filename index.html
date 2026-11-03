@@ -935,7 +935,7 @@ dialog .mb{overflow-x:hidden}
         <label class="mchk" style="margin-top:8px"><input type="checkbox" name="srcTanpa"> Chat pertama tidak pakai template iklan <span class="hint">(Source: Tanpa Keterangan)</span></label>
       </div>
       <div class="sec qh"><h4>Status <span class="hint">(boleh pilih lebih dari satu)</span></h4><div id="statusChips"></div></div>
-      <div class="sec qh"><h4>Invoice</h4>
+      <div class="sec qh"><h4>Invoice &amp; proforma</h4>
         <div class="form">
           <label><span class="lt">Brand invoice <span class="rq" aria-hidden="true">*</span></span><select name="invBrand" aria-required="true"></select></label>
           <label>No. invoice<input name="invNo" placeholder="Otomatis saat tersinkron" autocomplete="off"></label>
@@ -989,7 +989,7 @@ dialog .mb{overflow-x:hidden}
     <div class="mb">
       <div class="set">
         <div class="full sec"><h4>Template WA</h4>
-          <p class="hint" style="margin:0 0 10px">Pesan otomatis saat tombol WA ditekan. Kata dalam kurung kurawal diganti otomatis: {nama}, {perusahaan}, {layanan}, {brand}, {pic}, {invoice}, {total}, {dp}, {pelunasan}, {sisa}, {jatuhtempo}, {rekening}.</p>
+          <p class="hint" style="margin:0 0 10px">Pesan otomatis saat tombol WA ditekan. Kata dalam kurung kurawal diganti otomatis: {nama}, {perusahaan}, {layanan}, {brand}, {pic}, {dokumen}, {invoice}, {total}, {dp}, {pelunasan}, {sisa}, {jatuhtempo}, {rekening}.</p>
           <div class="kat" id="tplSeg"></div>
           <textarea id="tplText" rows="6" style="width:100%" aria-label="Isi template"></textarea>
           <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px"><span class="hint" id="tplNote"></span><button class="btn sm" type="button" id="tplReset">Pakai template bawaan</button></div>
@@ -1046,7 +1046,7 @@ dialog .mb{overflow-x:hidden}
     <button class="btn sm" type="button" id="invPdf">Download PDF</button>
     <button class="btn sm primary" type="button" id="invShare">Kirim ke WA</button>
     </div></div>
-  <div class="kat" id="invMode" hidden><button type="button" data-im="inv">Invoice / Proforma</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
+  <div class="kat" id="invMode" hidden><button type="button" data-im="inv" id="invTab">Proforma</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
   <div class="inote" id="invNote" hidden></div>
   <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
@@ -1197,22 +1197,22 @@ FU6:"Halo Kak {nama}, izin mengingatkan kembali untuk pembayaran DP {layanan} ya
 PRM1:"Halo Kak {nama} 🎉\nKabar baik! Saat ini {brand} sedang ada promo khusus untuk {layanan}.\n\nPromo ini terbatas, mau saya bantu amankan slotnya, Kak?",
 PRM2:"Halo Kak {nama}, mengingatkan promo {layanan} dari {brand} akan segera berakhir ⏳\n\nKalau Kakak masih berminat, kabari saya hari ini ya supaya harga promonya masih bisa dipakai 🙏"};
 Object.assign(WA_TPL_DEF,{
-INV:"Halo Kak {nama} 🙏\nBerikut kami kirimkan invoice {invoice} untuk {layanan}.\n\nTotal: {total}\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nMohon kirimkan bukti transfer setelah pembayaran ya, Kak. Terima kasih 🙏",
-TAGIH:"Halo Kak {nama}, semoga sehat selalu 🙏\nIzin mengingatkan untuk pelunasan {layanan} (invoice {invoice}).\n\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nKalau sudah transfer, mohon kirimkan buktinya ya, Kak. Terima kasih 🙏",
+INV:"Halo Kak {nama} 🙏\nBerikut kami kirimkan {dokumen} {invoice} untuk {layanan}.\n\nTotal: {total}\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nMohon kirimkan bukti transfer setelah pembayaran ya, Kak. Terima kasih 🙏",
+TAGIH:"Halo Kak {nama}, semoga sehat selalu 🙏\nIzin mengingatkan untuk pelunasan {layanan} ({dokumen} {invoice}).\n\nSisa tagihan: {sisa}\nJatuh tempo: {jatuhtempo}\n\nPembayaran bisa ditransfer ke:\n{rekening}\n\nKalau sudah transfer, mohon kirimkan buktinya ya, Kak. Terima kasih 🙏",
 TQDP:"Terima kasih Kak {nama} 🙏\nPembayaran DP sebesar {dp} untuk {layanan} sudah kami terima ✅\n\nKwitansi kami lampirkan. Tim kami langsung mulai proses pengerjaannya, dan {pic} akan update progresnya ke Kakak.\n\nSisa tagihan: {sisa}",
 TQLUNAS:"Terima kasih Kak {nama} 🙏\nPelunasan sebesar {pelunasan} untuk {layanan} sudah kami terima, pembayaran LUNAS ✅\n\nKwitansi kami lampirkan. Terima kasih sudah mempercayakan {brand} 😊",
 SELESAI:"Halo Kak {nama} 🎉\nKabar baik, pengurusan {layanan}{perusahaan_} sudah selesai!\n\nDokumennya siap kami serahkan. Mau dikirim ke alamat mana, atau Kakak ingin ambil langsung?\n\nTerima kasih sudah mempercayakan {brand} 🙏"});
-const TPL_EXTRA=[["INV","Kirim invoice"],["TAGIH","Ingatkan pelunasan"],["TQDP","Terima kasih DP"],["TQLUNAS","Terima kasih lunas"],["SELESAI","Berkas selesai"]];
+const TPL_EXTRA=[["INV","Kirim proforma / invoice"],["TAGIH","Ingatkan pelunasan"],["TQDP","Terima kasih DP"],["TQLUNAS","Terima kasih lunas"],["SELESAI","Berkas selesai"]];
 const TPL_KEYS=FU_LABELS.concat(TPL_EXTRA.map(x=>x[0])),tplName=k=>(TPL_EXTRA.find(x=>x[0]===k)||[k,k])[1];
 const waTpl=k=>((settings.waTpl||{})[k]||"").trim()||WA_TPL_DEF[k]||"";
 function waMsg(p,k){
   const b=(()=>{const x=p.invBrand||invBrandFor(brandOf(p));return x})();
   let t=waTpl(k).replace(/\{nama\}/g,p.nama||"").replace(/\{layanan\}/g,(p.layanan||"layanan kami")+(p.paket&&!/^(Spam|Lainnya)$/.test(p.layanan)?" (Paket "+p.paket+")":"")).replace(/\{brand\}/g,b).replace(/\{pic\}/g,p.pic||(user&&user.name)||"").replace(/\{perusahaan_\}/g,p.perusahaan?" untuk "+p.perusahaan:"").replace(/\{perusahaan\}/g,p.perusahaan||"");
-  if(/\{(invoice|total|dp|pelunasan|sisa|jatuhtempo|rekening)\}/.test(t)){
+  if(/\{(dokumen|invoice|total|dp|pelunasan|sisa|jatuhtempo|rekening)\}/.test(t)){
     // angka tagihan: untuk grup ikut invoice gabungan
     const q=["INV","TAGIH"].includes(k)&&groupOf(p).length>1?groupInvoice(p):p,c=invCalc(q),R=n=>rp(n);
     const due=q.invDue?new Date(q.invDue+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}):"-";
-    t=t.replace(/\{invoice\}/g,q.invNo||"(nomor menyusul)").replace(/\{total\}/g,R(c.total)).replace(/\{dp\}/g,R(c.dp)).replace(/\{pelunasan\}/g,R(c.lun)).replace(/\{sisa\}/g,c.sisa>0?R(c.sisa):"Rp0 (lunas)").replace(/\{jatuhtempo\}/g,due)
+    t=t.replace(/\{dokumen\}/g,isFinalInv(q)?"invoice":"proforma invoice").replace(/\{invoice\}/g,q.invNo||"(nomor menyusul)").replace(/\{total\}/g,R(c.total)).replace(/\{dp\}/g,R(c.dp)).replace(/\{pelunasan\}/g,R(c.lun)).replace(/\{sisa\}/g,c.sisa>0?R(c.sisa):"Rp0 (lunas)").replace(/\{jatuhtempo\}/g,due)
       .replace(/\{rekening\}/g,c.bk.length?c.bk.map(x=>`${x.bank} ${x.norek} a.n. ${x.an||c.issuer}`).join("\n"):"(rekening menyusul)");
   }
   return t;
@@ -1691,8 +1691,8 @@ function render(){
   const none=t=>`<li class="empty">${t}</li>`;
   $("#tgIb").innerHTML=ib.length?ib.map(p=>`<li>${who(p)}<div class="fu-choice"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div></li>`).join(""):none("Tidak ada yang perlu dipilih.");
   $("#tgFu").innerHTML=due.length?due.map(p=>{const s=fuState(p),d=dd(s.date);return li(p,`<span class="fuc due">${esc(s.label)}</span>${d<0?`<small class="late-txt">${Math.abs(d)} hari lewat</small>`:`<small class="today-txt">hari ini</small>`}`,waB(p,s.label,"WA "+esc(s.label))+`<button class="btn sm primary" type="button" data-fu="${p.id}">✓ Sudah</button>`)}).join(""):none("Semua follow-up hari ini beres. Mantap!");
-  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${pdOf(p)?`<small>Deal ${rpS(pdOf(p))}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
-  $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p,"","WA","TAGIH")+`<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
+  $("#tgDp").innerHTML=dpWait.length?dpWait.map(p=>li(p,`${pdOf(p)?`<small>Deal ${rpS(pdOf(p))}</small>`:`<small class="co">Price deal belum diisi</small>`}<small class="co">masuk ${fmtD(p.created)}</small>`,waB(p,"","WA","INV")+`<button class="btn sm" type="button" data-inv="${p.id}">${docName(p)}</button><button class="btn sm primary" type="button" data-pay="dp" data-id="${p.id}">DP masuk</button>`)).join(""):none("Tidak ada yang menunggu DP.");
+  $("#tgDue").innerHTML=overdue.length?overdue.map(p=>li(p,`<small class="money-neg">Sisa ${rpS(money(p).sisa)}</small><small class="late-txt">jatuh tempo ${fmtD(p.invDue)}</small>`,waB(p,"","WA","TAGIH")+`<button class="btn sm" type="button" data-inv="${p.id}">${docName(p)}</button><button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Pelunasan</button>`)).join(""):none("Tidak ada tagihan yang lewat jatuh tempo.");
   const lqP=lqPending(B).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
   $("#tgLq").innerHTML=lqP.length?lqP.slice(0,30).map(p=>li(p,`<small>${esc(p.sumber)}</small><small class="co">masuk ${fmtD(p.created)}</small>`,`<button class="btn sm" type="button" data-lq="Tidak Berkualitas" data-id="${p.id}">Tidak</button><button class="btn sm primary" type="button" data-lq="Berkualitas" data-id="${p.id}">Berkualitas</button>`)).join("")+(lqP.length>30?`<li class="empty">+${lqP.length-30} lainnya</li>`:""):none("Semua lead iklan sudah dinilai.");
   [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue],["#tgLqN",lqP]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
@@ -1727,7 +1727,7 @@ function render(){
   const sisaCell=p=>{if(!pdOf(p))return "–";const s=money(p).sisa;return s>0?`<span class="money-neg">${rpS(s)}</span>`:`<span class="money-ok">Lunas</span>`};
   const lay=p=>`${esc(p.layanan||"–")}${p.paket?`<div class="co">Paket ${esc(p.paket)}</div>`:""}`;
   const src=p=>`${esc(p.sumber||"–")}<div class="co">${esc(brandOf(p))}</div>`;
-  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">Invoice</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
+  const act=p=>{const w=waLink(p.wa);return `<div class="rowact">${w?`<a class="wa" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WA</a>`:""}${payBtn(p,"btn sm")}<button class="btn sm" type="button" data-inv="${p.id}">${docName(p)}</button><button class="btn sm" type="button" data-edit="${p.id}">Ubah</button></div>`};
   const OM=orderMap();
   const op=p=>{const o=OM[p.id];return o?` <span class="opill" title="Klien langganan. Order sebelumnya: ${esc(o.prev.map(d=>d?new Date(d.slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"?").join(", "))}">Order ke-${o.k+1}</span>`:""};
   const gp=p=>op(p)+(()=>{if(!p.grup)return "";const n=items.filter(x=>x.grup===p.grup).length;return n>1?` <button type="button" class="gpill" data-grp="${esc(p.grup)}" title="Tampilkan semua PT di grup ini">Grup ${n} PT</button>`:""})();
@@ -1741,7 +1741,7 @@ function render(){
       <div class="amt num">${pdOf(p)?`<b>${rpS(pdOf(p))}</b><div>${sisaCell(p)}</div>`:N(p.nilai)?`<span class="co">±${rpS(p.nilai)}</span>`:""}</div></div>
     <div class="meta"><span class="pill">${esc(p.sumber||"–")} · ${esc(brandOf(p))}</span>${isAdmin()?`<span class="pill">${esc(p.pic||"–")}</span>`:""}${p.vo?`<span class="pill">VO ${esc(p.vo)}</span>`:""}${p.kota?`<span class="pill">${esc(p.kota)}</span>`:""}</div>
     ${isClient(p)?mini(p):tagHtml(p)}
-    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">Invoice</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WhatsApp</a>`:""}</span></div></div>`};
+    <div class="r3">${fuState(p).active?`<span class="fu-l">${fuCell(p)}</span>`:""}<span class="acts">${payBtn(p,"inv-btn pay")}<button class="inv-btn" type="button" data-inv="${p.id}">${docName(p)}</button>${w?`<a class="wa-btn" href="${w}" target="_blank" rel="noopener" data-wapick="${p.id}">WhatsApp</a>`:""}</span></div></div>`};
   const emptyCard=`<div class="empty">${items.length?"Tidak ada data yang cocok dengan filter ini.":"Belum ada data. Ketuk + untuk menambah prospek."}</div>`;
   // ---- halaman (10/20/50/100 per halaman), bisa digeser ke samping ----
   const per=+$("#pgSize").value||10;
@@ -2178,7 +2178,7 @@ function kwHTML(p,mode){
   const R=n=>"Rp "+Math.round(N(n)).toLocaleString("id-ID");
   const fdi=s=>new Date(String(s).slice(0,10)+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"});
   const desc=its.map(x=>x.d).filter(Boolean);
-  const untuk=(isDp?"Uang muka (DP) ":"Pelunasan ")+(desc.length?desc.slice(0,3).join(", ")+(desc.length>3?` dan ${desc.length-3} item lainnya`:""):"layanan")+(p.invNo?` sesuai invoice ${p.invNo}`:"");
+  const untuk=(isDp?"Uang muka (DP) ":"Pelunasan ")+(desc.length?desc.slice(0,3).join(", ")+(desc.length>3?` dan ${desc.length-3} item lainnya`:""):"layanan")+(p.invNo?` sesuai ${isFinalInv(p)?"invoice":"proforma invoice"} ${p.invNo}`:"");
   const br=t=>esc(t).replace(/\n/g,"<br>");
   const row=(l,v)=>`<div class="kw-row"><span>${l}</span><div>${v}</div></div>`;
   const no=kwNo(p,mode);
@@ -2236,7 +2236,7 @@ function paintInv(p){
   if((invMode==="dp"&&!hasD)||(invMode==="lunas"&&!hasL))invMode="inv";
   $("#invMode").hidden=!hasD&&!hasL;
   document.querySelectorAll("#invMode [data-im]").forEach(x=>{x.hidden=(x.dataset.im==="dp"&&!hasD)||(x.dataset.im==="lunas"&&!hasL);x.classList.toggle("on",x.dataset.im===invMode)});
-  $("#invTtl").textContent=invMode==="inv"?(isFinalInv(p)?"Invoice":"Proforma invoice"):"Kwitansi";
+  $("#invTtl").textContent=invMode==="inv"?(isFinalInv(p)?"Invoice":"Proforma invoice"):"Kwitansi";$("#invTab").textContent=isFinalInv(p)?"Invoice":"Proforma invoice";
   $("#invDoc").innerHTML=docHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
@@ -2251,7 +2251,7 @@ function loadPdfLib(){
   pdfLib=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";sc.onload=()=>res();sc.onerror=()=>{pdfLib=null;sc.remove();rej(new Error("PDFLIB"))};document.head.appendChild(sc)});
   return pdfLib;
 }
-const invFile=p=>(((invMode==="inv"?p.invNo:kwNo(p,invMode))||((invMode==="inv"?"invoice ":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
+const invFile=p=>(((invMode==="inv"?(p.invNo?(isFinalInv(p)?"":"Proforma ")+p.invNo:""):kwNo(p,invMode))||((invMode==="inv"?(isFinalInv(p)?"invoice ":"proforma ")+"":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
 function printInv(){
   const p=items.find(x=>x.id===invId);if(!p)return;
   $("#printArea").innerHTML=docHTML(invTarget(p));document.body.classList.add("printing");
@@ -2709,7 +2709,9 @@ function payBankFill(p,mode){
 }
 function fillBankSel(sel,v){const o=bankOpts();if(v&&!o.includes(v))o.unshift(v);sel.innerHTML=`<option value="">–</option>`+o.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");sel.value=v||""}
 // DP = PROFORMA INVOICE bertanggal pembayaran DP; pelunasan = INVOICE bertanggal pelunasan
-const isFinalInv=p=>N(p.lunas)>0;
+// INVOICE hanya kalau sudah lunas penuh; sebelum itu (belum bayar / baru DP / bayar sebagian) = PROFORMA INVOICE
+const isFinalInv=p=>{const m=money(p);return m.gross>0&&m.bayar>0&&m.sisa<=0};
+const docName=p=>isFinalInv(p)?"Invoice":"Proforma";
 function payDateInv(p){if(isFinalInv(p)&&p.tglLunas)p.invDate=p.tglLunas;else if(N(p.dp)>0&&p.tglDp)p.invDate=p.tglDp}
 function payKind(p){const ph=phase(p);if(!["prospek","proses"].includes(ph))return "";if(!hasDp(p))return curStep(p)<=0?"dp":"";return pdOf(p)&&money(p).sisa>0?"lunas":""}
 function payBtn(p,cls){const k=payKind(p);return k?`<button class="${cls}" type="button" data-pay="${k}" data-id="${p.id}">${k==="dp"?"DP masuk":"Pelunasan"}</button>`:""}
