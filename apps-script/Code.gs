@@ -1023,3 +1023,155 @@ function vendorBackfillIzinin_() {
   props.setProperty('IZN_BACKFILL', new Date().toISOString());
   return leads.length + ' baris ditambahkan';
 }
+
+/* ---------------- Pengingat email harian jam 08.00 untuk PIC ---------------- */
+// Isi sama dengan "Tugas hari ini" di aplikasi, hanya data milik PIC tersebut.
+// Email PIC disimpan di sheet Pengguna kolom D ("Email").
+const REM_APP_URL = 'https://my-razara.github.io/dashboard-prospek/';
+const REM_EMAIL_DEF = { eko: 'ekovorent@gmail.com', mayang: 'mayangvorent@gmail.com', deny: 'deny.echoffice@gmail.com' };
+const REM_FU_BASE = [['FU1', 2], ['FU2', 5], ['FU3', 10], ['FU4', 17]], REM_FU_DP = [['FU5', 21], ['FU6', 26]], REM_FU_PRM = [['PRM1', 30], ['PRM2', 37]];
+const REM_FU_LABELS = REM_FU_BASE.concat(REM_FU_DP, REM_FU_PRM).map(x => x[0]);
+
+function remHas_(p, t) { return (Array.isArray(p.statuses) ? p.statuses : String(p.statuses || '').split(',')).map(x => String(x).trim()).indexOf(t) >= 0; }
+function remHasDp_(p) { return (Number(p.dp) || 0) > 0 || !!p.tglDp; }
+function remStep_(p) {
+  let c = -1;
+  PROC.forEach((s, i) => { if (remHas_(p, s)) c = i; });
+  if (c < 0 && remHasDp_(p) && !remHas_(p, 'Lose') && !remHas_(p, 'Spam') && !remHas_(p, 'Delete')) c = 0;
+  return c;
+}
+function remPhase_(p) {
+  if (remHas_(p, 'Delete')) return 'delete';
+  if (remHas_(p, 'Spam')) return 'spam';
+  if (remHas_(p, 'Lose')) return 'lose';
+  if (remHas_(p, 'Serah Terima')) return 'selesai';
+  if (remHas_(p, 'Klien') || remStep_(p) >= 0) return 'proses';
+  return 'prospek';
+}
+function remAddDays_(d, n) {
+  const s = String(d).slice(0, 10), t = new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)) + n);
+  return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
+}
+function remDays_(a, b) { // b - a (hari)
+  const d = s => new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))).getTime();
+  return Math.round((d(b) - d(a)) / 864e5);
+}
+// sama dengan fuState() di aplikasi
+function remFu_(p, today) {
+  if (p.grup && p.grup !== p.id) return { active: false };
+  const ph = remPhase_(p);
+  if (['lose', 'spam', 'delete', 'selesai'].indexOf(ph) >= 0 || remHas_(p, 'Klien') || remStep_(p) >= 1 || !p.created) return { active: false };
+  const done = {};
+  String(p.fuDone || '').split(';').forEach(x => { const a = x.split('@'), k = (a[0] || '').trim(); if (REM_FU_LABELS.indexOf(k) >= 0) done[k] = (a[1] || '').trim() || '1'; });
+  const ch = p.fuChoice || (remHas_(p, 'Waiting DP') ? 'dp' : '');
+  let seq = REM_FU_BASE.slice();
+  if (done.FU4) { if (ch === 'dp') { seq = seq.concat(REM_FU_DP); if (done.FU6) seq = seq.concat(REM_FU_PRM); } else if (ch === 'promo') seq = seq.concat(REM_FU_PRM); }
+  let idx = -1;
+  seq.forEach((s, i) => { if (remAddDays_(p.created, s[1]) <= today) idx = i; });
+  if (idx < 0) return { active: true, upcoming: true };
+  const cur = seq[idx][0];
+  return { active: true, label: cur, date: remAddDays_(p.created, seq[idx][1]), done: !!done[cur], missed: seq.slice(0, idx).filter(s => !done[s[0]]).map(s => s[0]), inbox: cur === 'FU4' && !!done.FU4 && !ch };
+}
+
+function remEmails_(ss) {
+  const sh = ss.getSheetByName(SHEET_USER), out = {};
+  if (!sh || sh.getLastRow() < 2 || sh.getLastColumn() < 4) return out;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(r => { const e = String(r[3] || '').trim(); if (String(r[0]).trim() && /@/.test(e)) out[norm_(r[0])] = e; });
+  return out;
+}
+
+function remTasks_(items, pic, today) {
+  const mine = items.filter(p => norm_(p.pic) === norm_(pic));
+  const act = mine.filter(p => ['prospek', 'proses'].indexOf(remPhase_(p)) >= 0);
+  const fs = mine.map(p => [p, remFu_(p, today)]);
+  const inbox = fs.filter(x => x[1].inbox).map(x => x[0]);
+  const fu = fs.filter(x => x[1].active && x[1].label && !x[1].done).sort((a, b) => a[1].date.localeCompare(b[1].date)).map(x => ({ p: x[0], s: x[1] }));
+  const dp = act.filter(p => remStep_(p) === 0 && !remHasDp_(p)).sort((a, b) => String(a.created).localeCompare(String(b.created)));
+  const due = act.filter(p => { const m = money_(p); return m.gross && m.sisa > 0 && p.invDue && String(p.invDue) < today; }).sort((a, b) => String(a.invDue).localeCompare(String(b.invDue)));
+  const lq = mine.filter(p => ADS.map[String(p.sumber || '').trim()] && !(p.grup && p.grup !== p.id) && !p.kualitas && String(p.created || '') >= ADS.start && String(p.created || '') < today && !remHas_(p, 'Spam') && p.layanan !== 'Spam' && !remHas_(p, 'Delete'));
+  return { inbox: inbox, fu: fu, dp: dp, due: due, lq: lq };
+}
+
+function remHtml_(pic, t, today) {
+  const e = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const rp = n => 'Rp' + Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const BL = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const HR = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const td = new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)));
+  const tgl = HR[td.getDay()] + ', ' + td.getDate() + ' ' + BL[td.getMonth()] + ' ' + td.getFullYear();
+  const fd = s => { s = String(s || ''); return s ? Number(s.slice(8, 10)) + ' ' + BL[Number(s.slice(5, 7)) - 1].slice(0, 3) : '–'; };
+  const wa = w => { let n = String(w || '').replace(/\D/g, ''); if (!n) return ''; if (n.indexOf('0') === 0) n = '62' + n.slice(1); else if (n.indexOf('8') === 0) n = '62' + n; return 'https://wa.me/' + n; };
+  const who = p => '<div style="font-weight:700;color:#0f172a;font-size:15px">' + e(p.nama) + '</div><div style="color:#64748b;font-size:13px;margin-top:2px">' + e([p.layanan, p.paket].filter(Boolean).join(' · ') || '–') + '</div>';
+  const pill = (txt, bg, fg) => '<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:' + bg + ';color:' + fg + ';font-size:12px;font-weight:700;white-space:nowrap">' + e(txt) + '</span>';
+  const waBtn = p => wa(p.wa) ? '<a href="' + wa(p.wa) + '" style="display:inline-block;padding:7px 12px;border-radius:9px;background:#dcfce7;color:#166534;font-weight:700;font-size:13px;text-decoration:none">WhatsApp</a>' : '';
+  const row = (p, mid) => '<tr><td style="padding:12px 0;border-bottom:1px solid #eef2f7;vertical-align:top">' + who(p) + '<div style="margin-top:6px">' + mid + '</div></td><td style="padding:12px 0 12px 10px;border-bottom:1px solid #eef2f7;text-align:right;vertical-align:middle;width:1%">' + waBtn(p) + '</td></tr>';
+  const MAX = 10;
+  const sec = (title, sub, color, list, fn) => {
+    if (!list.length) return '';
+    return '<tr><td style="padding:22px 24px 4px"><div style="border-left:4px solid ' + color + ';padding-left:10px"><div style="font-size:16px;font-weight:800;color:#0f172a">' + e(title) + ' <span style="color:' + color + '">(' + list.length + ')</span></div><div style="font-size:13px;color:#64748b;margin-top:2px">' + e(sub) + '</div></div>'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px">' + list.slice(0, MAX).map(fn).join('') + '</table>'
+      + (list.length > MAX ? '<div style="font-size:13px;color:#64748b;padding-top:8px">+' + (list.length - MAX) + ' lainnya, lihat di aplikasi</div>' : '') + '</td></tr>';
+  };
+  const tiles = [['Inbox', t.inbox.length, '#4f46e5'], ['Follow-up', t.fu.length, '#d97706'], ['Waiting DP', t.dp.length, '#059669'], ['Tagihan telat', t.due.length, '#dc2626'], ['Lead belum dinilai', t.lq.length, '#0284c7']];
+  const total = tiles.reduce((a, x) => a + x[1], 0);
+  return '<!doctype html><html><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 10px"><tr><td align="center">'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.08)">'
+    + '<tr><td style="background:#1e3a8a;background:linear-gradient(135deg,#1e3a8a,#4f46e5);padding:26px 24px;color:#ffffff">'
+    + '<div style="font-size:13px;opacity:.85">' + e(tgl) + '</div>'
+    + '<div style="font-size:22px;font-weight:800;margin-top:4px">Selamat pagi, ' + e(pic) + ' 👋</div>'
+    + '<div style="font-size:14px;opacity:.9;margin-top:6px">Ada <b>' + total + ' tugas</b> yang perlu kamu kerjakan hari ini.</div></td></tr>'
+    + '<tr><td style="padding:18px 16px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
+    + tiles.map(x => '<td align="center" style="padding:4px"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 4px"><div style="font-size:22px;font-weight:800;color:' + (x[1] ? x[2] : '#94a3b8') + '">' + x[1] + '</div><div style="font-size:11px;color:#64748b;margin-top:2px;line-height:1.2">' + e(x[0]) + '</div></div></td>').join('')
+    + '</tr></table></td></tr>'
+    + sec('Inbox follow-up', 'FU4 selesai, pilih lanjutannya: Waiting DP atau Saran promosi.', '#4f46e5', t.inbox, p => row(p, pill('Pilih lanjutan', '#eef2ff', '#4338ca')))
+    + sec('Follow-up jatuh tempo', 'Kirim pesan follow-up, lalu tandai "Sudah" di aplikasi.', '#d97706', t.fu, x => { const d = remDays_(x.s.date, today); return row(x.p, pill(x.s.label, '#fef3c7', '#92400e') + ' <span style="font-size:12.5px;color:' + (d > 0 ? '#dc2626' : '#64748b') + '">' + (d > 0 ? d + ' hari lewat' : 'hari ini') + '</span>' + (x.s.missed.length ? ' <span style="font-size:12px;color:#b45309">· ' + e(x.s.missed.join(', ')) + ' terlewat</span>' : '')); })
+    + sec('Waiting DP, belum bayar', 'Kirim invoice / ingatkan pembayaran DP.', '#059669', t.dp, p => { const m = money_(p); return row(p, (m.gross ? pill('Deal ' + rp(m.net), '#dcfce7', '#166534') : pill('Price deal belum diisi', '#f1f5f9', '#475569')) + ' <span style="font-size:12.5px;color:#64748b">masuk ' + fd(p.created) + '</span>'); })
+    + sec('Tagihan lewat jatuh tempo', 'Ingatkan pelunasan ke klien.', '#dc2626', t.due, p => row(p, pill('Sisa ' + rp(money_(p).sisa), '#fee2e2', '#991b1b') + ' <span style="font-size:12.5px;color:#dc2626">jatuh tempo ' + fd(p.invDue) + '</span>'))
+    + sec('Lead iklan belum dinilai', 'Nilai Berkualitas / Tidak di menu Tugas hari ini (tidak wajib, untuk laporan vendor iklan).', '#0284c7', t.lq, p => row(p, pill(String(p.sumber || ''), '#e0f2fe', '#075985') + ' <span style="font-size:12.5px;color:#64748b">masuk ' + fd(p.created) + '</span>'))
+    + '<tr><td align="center" style="padding:26px 24px 8px"><a href="' + REM_APP_URL + '" style="display:inline-block;padding:13px 26px;border-radius:12px;background:#4f46e5;color:#ffffff;font-weight:800;font-size:15px;text-decoration:none">Buka aplikasi Prospek</a></td></tr>'
+    + '<tr><td style="padding:10px 24px 24px;text-align:center;font-size:12px;color:#94a3b8">Email otomatis setiap pagi dari aplikasi Monitoring Prospek. Tugas yang sudah dikerjakan di aplikasi tidak muncul lagi besok.</td></tr>'
+    + '</table></td></tr></table></body></html>';
+}
+
+// dipanggil pemicu harian jam 08.00
+function kirimPengingatPagi() {
+  const ss = ss_(), tz = ss.getSpreadsheetTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const items = readAll_(ss), emails = remEmails_(ss), out = [];
+  readUsers_(ss).filter(u => u.role !== 'admin').forEach(u => {
+    const to = emails[norm_(u.name)];
+    if (!to) { out.push(u.name + ': email belum diisi'); return; }
+    const t = remTasks_(items, u.name, today);
+    const n = t.inbox.length + t.fu.length + t.dp.length + t.due.length + t.lq.length;
+    if (!n) { out.push(u.name + ': tidak ada tugas, email tidak dikirim'); return; }
+    const parts = [[t.fu.length, 'follow-up'], [t.inbox.length, 'inbox'], [t.dp.length, 'waiting DP'], [t.due.length, 'tagihan telat'], [t.lq.length, 'lead belum dinilai']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]);
+    try {
+      MailApp.sendEmail({ to: to, subject: 'Tugas hari ini, ' + u.name + ': ' + parts.join(', '), htmlBody: remHtml_(u.name, t, today), name: 'Monitoring Prospek' });
+      out.push(u.name + ': terkirim ke ' + to + ' (' + n + ' tugas)');
+    } catch (e) { out.push(u.name + ': GAGAL ' + String((e && e.message) || e)); }
+  });
+  PropertiesService.getScriptProperties().setProperty('REM_LAST', today + ' ' + out.join(' | '));
+  return out;
+}
+
+// JALANKAN SEKALI dari editor Apps Script: isi email PIC, pasang pemicu jam 08.00, lalu kirim contoh ke email admin
+function setupPengingat() {
+  const ss = ss_(), sh = ss.getSheetByName(SHEET_USER);
+  if (String(sh.getRange(1, 4).getValue()).trim() !== 'Email') sh.getRange(1, 4).setValue('Email').setFontWeight('bold');
+  if (sh.getLastRow() >= 2) {
+    const rg = sh.getRange(2, 1, sh.getLastRow() - 1, 4), v = rg.getValues();
+    v.forEach(r => { const d = REM_EMAIL_DEF[norm_(r[0])]; if (d && !String(r[3]).trim()) r[3] = d; });
+    sh.getRange(2, 4, v.length, 1).setValues(v.map(r => [r[3]]));
+  }
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'kirimPengingatPagi').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('kirimPengingatPagi').timeBased().everyDays(1).atHour(8).nearMinute(0).inTimezone(ss.getSpreadsheetTimeZone()).create();
+  Logger.log('Pemicu jam 08.00 (' + ss.getSpreadsheetTimeZone() + ') terpasang. Email PIC: ' + JSON.stringify(remEmails_(ss)));
+  // contoh tampilan ke pemilik script, supaya bisa dicek dulu
+  const me = Session.getEffectiveUser().getEmail(), tz = ss.getSpreadsheetTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const pic = readUsers_(ss).find(u => u.role !== 'admin');
+  if (me && pic) {
+    const t = remTasks_(readAll_(ss), pic.name, today);
+    MailApp.sendEmail({ to: me, subject: '[Contoh] Pengingat pagi untuk ' + pic.name, htmlBody: remHtml_(pic.name, t, today), name: 'Monitoring Prospek' });
+    Logger.log('Contoh pengingat (data ' + pic.name + ') dikirim ke ' + me);
+  }
+}
