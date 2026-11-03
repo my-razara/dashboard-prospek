@@ -337,6 +337,20 @@ dialog.paydlg{width:min(460px,94vw)}
 .themeBtn .ic-sun,.themeBtn .ic-moon{display:none}
 html.is-dark .themeBtn .ic-sun{display:block}
 html:not(.is-dark) .themeBtn .ic-moon{display:block}
+.adsc{margin-top:16px}
+.adsc[hidden]{display:none}
+.ads-t{width:100%;border-collapse:collapse;font-size:14px}
+.ads-t th{font-size:12px;font-weight:600;color:var(--ink-3);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ads-t th:first-child,.ads-t td:first-child{text-align:left}
+.ads-t td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ads-t tr.tot td{font-weight:800;border-bottom:0}
+.ads-wrap{overflow-x:auto}
+.ads-ch{margin-top:14px}
+.ads-ch svg{width:100%;height:150px;display:block}
+.ads-lg{display:flex;gap:14px;font-size:12px;color:var(--ink-3);margin-top:4px}
+.ads-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.ads-note{font-size:12px;color:var(--ink-3);margin-top:8px}
+.ads-err{font-size:13px;color:var(--lost);margin:6px 0}
 .home2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
 @media (max-width:1180px){.home2{grid-template-columns:1fr}}
 .home2 .card{margin:0}
@@ -781,6 +795,10 @@ dialog .mb{overflow-x:hidden}
   <section class="home2" data-mv="home">
     <div class="card"><h3>Posisi alur <button type="button" class="lnk" data-go="alur">Lihat alur →</button></h3><div class="hflow" id="homeFlow"></div></div>
     <div class="card"><h3>Follow-up hari ini <button type="button" class="lnk" data-go="fu">Lihat semua →</button></h3><ul class="fu" id="homeFu"></ul></div>
+  </section>
+  <section class="card adsc" id="adsCard" data-mv="home" hidden>
+    <h3><span>Chat vs Conversion Google Ads <small id="adsSub"></small></span><button type="button" class="btn sm" id="adsSyncBtn">Sinkron ulang sheet WA</button></h3>
+    <div id="adsBody"><p class="co">Memuat data Google Ads…</p></div>
   </section>
 
   <section class="grid2">
@@ -1457,6 +1475,7 @@ function periodOk(p){
 let pbKey="";
 function fillPeriodOpts(){
   const ms=new Set([TODAY.slice(0,7)]);items.forEach(p=>{const b=bulanOf(p);if(/^\d{4}-\d{2}$/.test(b))ms.add(b)});
+  if(typeof adsData!=="undefined"&&adsData&&isAdmin())adsData.rows.forEach(r=>{const m=String(r[0]).slice(0,7);if(m<=TODAY.slice(0,7))ms.add(m)});
   const months=[...ms].sort().reverse(),years=[...new Set(months.map(m=>m.slice(0,4)))];
   const key=months.join(",");if(key===pbKey)return;pbKey=key;
   const fm=$("#fMonth"),fy=$("#fYear"),vm=fm.value,vy=fy.value;
@@ -1585,6 +1604,7 @@ function render(){
   const topFu=ib.map(p=>[p,"Inbox"]).concat(due.map(p=>[p,fuState(p).label])).slice(0,6);
   $("#homeFu").innerHTML=topFu.length?topFu.map(([p,l])=>`<li><div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${isAdmin()?" · "+esc(p.pic||""):""}</span></div><span class="fuc ${l==="Inbox"?"ib":"due"}">${esc(l)}</span></li>`).join("")+(due.length+ib.length>6?`<li class="empty">+${due.length+ib.length-6} lainnya</li>`:""):`<li class="empty">Tidak ada follow-up hari ini.</li>`;
   updFilterCount();
+  try{renderAds()}catch(e){}
   const who=p=>`<div class="who"><b>${esc(p.nama)}</b><span>${esc(p.layanan||"")}${p.paket?" "+esc(p.paket):""}${isAdmin()?" · "+esc(p.pic||""):""}</span></div>`;
   const wa=p=>{const s=fuState(p),w=waFuLink(p,s.label);return w?`<a class="wa" href="${w}" target="_blank" rel="noopener" title="Kirim template ${esc(s.label||"")}">WA ${esc(s.label||"")}</a>`:""};
   $("#fuList").innerHTML=(ib.length?`<li class="fu-sec">Inbox · FU4 selesai, pilih lanjutan</li>`+ib.map(p=>`<li>${who(p)}<div class="fu-choice"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div></li>`).join(""):"")
@@ -2236,6 +2256,57 @@ function shrinkImg(file){
   });
 }
 $("#ibLogo").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{ibSave();ibData[ibCur].logo=await shrinkImg(f);ibShow(ibCur)}catch(err){$("#setErr").textContent="Logo gagal dibaca. Coba file PNG atau JPG lain."}};
+
+// ---------- Chat vs Conversion Google Ads (admin) ----------
+const ADS_SRC={"ads-lopo":0,"ads-gusti":1,"ads-echo":2},ADS_BR=["Vorent","Izinin","Echoffice"];
+let adsData=null,adsAt=0,adsBusy=false,adsErrTxt="";
+async function loadAds(force){
+  if(!isAdmin()||adsBusy||!API||!navigator.onLine)return;
+  if(!force&&adsData&&Date.now()-adsAt<600000)return;
+  adsBusy=true;
+  try{adsData=await call("adsStats");adsAt=Date.now();adsErrTxt="";try{fillPeriodOpts()}catch(e){}}
+  catch(e){adsErrTxt=e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy.":/permission|access|izin|openById/i.test(e.message||"")?"Server belum punya izin buka spreadsheet Google Ads. Jalankan setupGoogleAds sekali di Apps Script.":(e.message||"Gagal memuat data Google Ads.")}
+  finally{adsBusy=false;renderAds()}
+}
+function renderAds(){
+  const card=$("#adsCard");if(!card)return;card.hidden=!isAdmin();if(!isAdmin())return;
+  if(!adsData){$("#adsBody").innerHTML=adsErrTxt?`<p class="ads-err">${esc(adsErrTxt)}</p>`:`<p class="co">Memuat data Google Ads…</p>`;loadAds();return}
+  const start=adsData.start||"2026-11-01";
+  // chat dari aplikasi (sejak tanggal mulai), 1 grup = 1 chat
+  const appChat={};items.forEach(p=>{const b=ADS_SRC[p.sumber];if(b==null)return;const d=String(p.created||"").slice(0,10);if(d<start)return;const k=d+"|"+b;(appChat[k]=appChat[k]||new Set()).add(leadKey(p))});
+  const rows=adsData.rows.filter(r=>r[0]<=TODAY&&periodOk({created:r[0]}));
+  const days=rows.map(r=>{const chat=[0,1,2].map(b=>r[0]>=start?(appChat[r[0]+"|"+b]?appChat[r[0]+"|"+b].size:0):r[1+b*2]);const conv=[0,1,2].map(b=>r[2+b*2]);return {d:r[0],chat,conv}});
+  // tanggal di aplikasi yang belum ada barisnya di sheet
+  const seen=new Set(rows.map(r=>r[0]));Object.keys(appChat).forEach(k=>{const d=k.split("|")[0];if(!seen.has(d)&&periodOk({created:d})){seen.add(d);days.push({d,chat:[0,1,2].map(b=>appChat[d+"|"+b]?appChat[d+"|"+b].size:0),conv:[0,0,0]})}});
+  days.sort((a,b)=>a.d.localeCompare(b.d));
+  const sum=(k,b)=>days.reduce((a,x)=>a+x[k][b],0);
+  const cl=[0,1,2].map(b=>{const P=items.filter(p=>ADS_SRC[p.sumber]===b&&periodOk(p)&&paidRec(p));return {n:new Set(P.map(leadKey)).size,v:P.reduce((a,p)=>a+pdOf(p),0)}});
+  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"–";
+  const line=(l,ch,cv,c)=>`<tr${l==="Total"?' class="tot"':""}><td>${l}</td><td>${ch}</td><td>${cv}</td><td>${pct(ch,cv)}</td><td>${c.n}</td><td>${pct(c.n,ch)}</td><td>${rpS(c.v)}</td></tr>`;
+  const T={ch:0,cv:0,n:0,v:0};
+  let h=`<div class="ads-wrap"><table class="ads-t"><thead><tr><th>Brand</th><th>Chat</th><th>Conversion</th><th>Chat / conv</th><th>Closing</th><th>Closing rate</th><th>Omzet</th></tr></thead><tbody>`;
+  [0,1,2].forEach(b=>{const ch=sum("chat",b),cv=sum("conv",b);T.ch+=ch;T.cv+=cv;T.n+=cl[b].n;T.v+=cl[b].v;h+=line(ADS_BR[b],ch,cv,cl[b])});
+  h+=line("Total",T.ch,T.cv,T)+`</tbody></table></div>`;
+  // grafik harian (maks 62 hari)
+  const D=days.slice(-62);
+  if(D.length>1){
+    const W=640,H=150,pad=18,mx=Math.max(1,...D.map(x=>Math.max(x.chat[0]+x.chat[1]+x.chat[2],x.conv[0]+x.conv[1]+x.conv[2]))),bw=(W-pad*2)/D.length;
+    const y=v=>H-pad-(H-pad*2)*v/mx;
+    let g="";D.forEach((x,i)=>{const c=x.chat[0]+x.chat[1]+x.chat[2],v=x.conv[0]+x.conv[1]+x.conv[2],x0=pad+i*bw;
+      g+=`<rect x="${(x0+bw*.12).toFixed(1)}" y="${y(c).toFixed(1)}" width="${(bw*.38).toFixed(1)}" height="${(H-pad-y(c)).toFixed(1)}" rx="2" fill="var(--btn)"><title>${x.d}: ${c} chat</title></rect><rect x="${(x0+bw*.5).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw*.38).toFixed(1)}" height="${(H-pad-y(v)).toFixed(1)}" rx="2" fill="var(--amber)"><title>${x.d}: ${v} conversion</title></rect>`});
+    g+=`<line x1="${pad}" x2="${W-pad}" y1="${H-pad}" y2="${H-pad}" stroke="var(--line)"/>`;
+    h+=`<div class="ads-ch"><div class="ads-lg" style="justify-content:space-between;margin:0 0 4px"><span>Per hari · maks ${mx}</span></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Chat dan conversion per hari">${g}</svg><div class="ads-lg" style="justify-content:space-between"><span>${fmtD(D[0].d)}</span><span>${fmtD(D[D.length-1].d)}</span></div><div class="ads-lg"><span><i style="background:var(--btn)"></i>Chat</span><span><i style="background:var(--amber)"></i>Conversion</span></div></div>`;
+  }
+  h+=`<div class="ads-note">Chat sejak ${fmtDY(start)} dihitung dari aplikasi (semua chat sumber ads, 1 grup = 1 chat), sebelumnya dari sheet WA. Conversion dari kolom Conv sheet WA. Closing = chat iklan yang sudah DP / klien.</div>`;
+  if(adsData.err)h+=`<p class="ads-err">Terakhir gagal menulis ke sheet WA: ${esc(adsData.err)}</p>`;
+  if(adsErrTxt)h+=`<p class="ads-err">${esc(adsErrTxt)}</p>`;
+  $("#adsSub").textContent=adsData.ok?"· sheet WA terisi "+new Date(adsData.ok).toLocaleString("id-ID",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+  $("#adsBody").innerHTML=h;
+}
+$("#adsSyncBtn").onclick=async()=>{const b=$("#adsSyncBtn");b.disabled=true;b.textContent="Menyinkronkan…";
+  try{const r=await call("adsSync");toast(`Sheet WA diisi ulang (${r.n} tanggal)`);await loadAds(true)}
+  catch(e){toast(e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy":"Gagal: "+(e.message||"coba lagi"))}
+  finally{b.disabled=false;b.textContent="Sinkron ulang sheet WA"}};
 
 // ---------- mode siang / malam ----------
 const darkMQ=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;

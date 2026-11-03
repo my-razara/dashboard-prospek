@@ -108,6 +108,8 @@ function route_(q) {
     case 'batch': return batch(q.token, q.ops);
     case 'saveSettings': return saveSettings(q.token, q.settings);
     case 'checkWa': return checkWa(q.token, q.wa, q.id, q.grup);
+    case 'adsStats': return adsStats(q.token);
+    case 'adsSync': return adsSync(q.token);
   }
   throw new Error('UNKNOWN');
 }
@@ -156,6 +158,9 @@ function batch(token, ops) {
     const tz = ss.getSpreadsheetTimeZone();
     const brands = readInvBrands_(ss);
     let waSet = null;
+    const adsDates = {};
+    const adsMark = (sumber, created) => { const d = adsIso_(created, tz); if (ADS.map[String(sumber || '').trim()] && d) adsDates[d] = 1; };
+    const CR_I = FIELDS.findIndex(f => f[0] === 'created'), SB_I = FIELDS.findIndex(f => f[0] === 'sumber');
     const results = ops.map(op => {
       try {
         const id = String(op.id || '');
@@ -163,7 +168,7 @@ function batch(token, ops) {
         const hit = findRow_(sh, id);
         if (hit && u.role !== 'admin' && norm_(sh.getRange(hit, PIC_COL).getValue()) !== norm_(u.name)) throw new Error('FORBIDDEN');
         if (op.op === 'del') {
-          if (hit) sh.deleteRow(hit);
+          if (hit) { const old = sh.getRange(hit, 1, 1, FIELDS.length).getValues()[0]; adsMark(old[SB_I], old[CR_I]); sh.deleteRow(hit); }
           return { id: id, ok: true };
         }
         const o = op.rec || {};
@@ -171,6 +176,8 @@ function batch(token, ops) {
         if (u.role !== 'admin') o.pic = u.name;
         o.updatedBy = u.name;
         const ex = hit ? sh.getRange(hit, 1, 1, FIELDS.length).getValues()[0] : null;
+        if (ex) adsMark(ex[SB_I], ex[CR_I]);
+        adsMark(o.sumber, o.created);
         if (!String(o.invNo || '').trim()) {
           const old = ex ? String(ex[INVNO_COL - 1] || '').trim() : '';
           // nomor invoice hanya diterbitkan jika status sudah Waiting DP atau tahap setelahnya
@@ -196,6 +203,8 @@ function batch(token, ops) {
       }
     });
     const v = results.some(r => r.ok) ? bump_() : { prev: getVersion(), ver: getVersion() };
+    // isi otomatis jumlah chat iklan ke spreadsheet Google Ads (gagal di sini tidak membatalkan simpan data)
+    if (Object.keys(adsDates).length) { try { adsWrite_(Object.keys(adsDates)); } catch (e) { adsErr_(e); } }
     return { results: results, prev: v.prev, ver: v.ver };
   } finally {
     lock.releaseLock();
@@ -622,4 +631,161 @@ function writeSettings_(sh, s) {
   sh.getRange(1, 1, rows.length, 9).setValues(rows);
   sh.getRange(1, 1, 1, 9).setFontWeight('bold');
   sh.setFrozenRows(1);
+}
+
+/* ---------------- Spreadsheet Google Ads (sheet "WA") ---------------- */
+// Jumlah chat dari iklan per tanggal masuk otomatis ditulis ke kolom wa-vo / wa-iz / wa-ec.
+// Kolom Conv tidak pernah diubah. Hanya tanggal mulai ADS.start ke atas yang diisi.
+const ADS = {
+  id: '1aGyJVbfYVSv9NrvhaxKaOdR--YxwR2EKttbbWJeLXl8',
+  sheet: 'WA',
+  start: '2026-11-01',
+  map: { 'ads-lopo': 'wa-vo', 'ads-gusti': 'wa-iz', 'ads-echo': 'wa-ec' },
+  cols: ['wa-vo', 'wa-iz', 'wa-ec']
+};
+const ADS_MON = { jan: 1, feb: 2, mar: 3, apr: 4, mei: 5, may: 5, jun: 6, jul: 7, agu: 8, agt: 8, aug: 8, sep: 9, okt: 10, oct: 10, nov: 11, des: 12, dec: 12 };
+const ADS_MON_TXT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function adsIso_(v, tz) {
+  if (v instanceof Date) return isNaN(v) ? '' : Utilities.formatDate(v, tz, 'yyyy-MM-dd');
+  const t = String(v == null ? '' : v).trim();
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = t.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,})[-\/ ](\d{2,4})$/);
+  if (m && ADS_MON[m[2].slice(0, 3).toLowerCase()]) {
+    const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+    return y + '-' + ('0' + ADS_MON[m[2].slice(0, 3).toLowerCase()]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  }
+  return '';
+}
+
+function adsErr_(e) {
+  PropertiesService.getScriptProperties().setProperty('ADS_ERR', new Date().toISOString() + ' ' + String((e && e.message) || e));
+}
+
+function adsOpen_() {
+  const id = PropertiesService.getScriptProperties().getProperty('ADS_SHEET_ID') || ADS.id;
+  const ss = SpreadsheetApp.openById(id);
+  const sh = ss.getSheetByName(ADS.sheet);
+  if (!sh) throw new Error('Sheet "' + ADS.sheet + '" tidak ditemukan di spreadsheet Google Ads');
+  const tz = ss.getSpreadsheetTimeZone();
+  const last = sh.getLastRow(), lc = sh.getLastColumn();
+  const vals = sh.getRange(1, 1, Math.max(last, 1), Math.max(lc, 1)).getValues();
+  let hr = -1;
+  for (let i = 0; i < Math.min(vals.length, 30); i++) if (vals[i].map(x => String(x).trim().toLowerCase()).indexOf('wa-vo') >= 0) { hr = i; break; }
+  if (hr < 0) throw new Error('Judul kolom wa-vo tidak ditemukan di sheet ' + ADS.sheet);
+  const head = vals[hr].map(x => String(x).trim().toLowerCase());
+  const cols = {};
+  ADS.cols.forEach(c => { const i = head.indexOf(c); if (i < 0) throw new Error('Kolom ' + c + ' tidak ditemukan'); cols[c] = i + 1; });
+  const rows = {};
+  let maxD = '', maxRow = hr + 1;
+  for (let i = hr + 1; i < vals.length; i++) {
+    const d = adsIso_(vals[i][0], tz);
+    if (!d) continue;
+    rows[d] = i + 1;
+    if (d > maxD) { maxD = d; maxRow = i + 1; }
+  }
+  return { ss: ss, sh: sh, tz: tz, hr: hr + 1, cols: cols, rows: rows, maxD: maxD, maxRow: maxRow, vals: vals };
+}
+
+// tambah baris tanggal baru di bawah (format & rumus kolom B-D mengikuti baris terakhir)
+function adsAppend_(ctx, d) {
+  if (!ctx.maxD || d <= ctx.maxD) return 0;
+  const sh = ctx.sh;
+  let cur = ctx.maxD, row = ctx.maxRow;
+  while (cur < d) {
+    const nx = new Date(Number(cur.slice(0, 4)), Number(cur.slice(5, 7)) - 1, Number(cur.slice(8, 10)) + 1);
+    cur = nx.getFullYear() + '-' + ('0' + (nx.getMonth() + 1)).slice(-2) + '-' + ('0' + nx.getDate()).slice(-2);
+    const prev = sh.getRange(row, 1, 1, 4), nr = row + 1;
+    if (nr > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);
+    const tgt = sh.getRange(nr, 1, 1, 4);
+    const f = prev.getFormulasR1C1()[0];
+    const auto = [nx, nx.getDate(), ADS_MON_TXT[nx.getMonth()], nx.getFullYear()];
+    tgt.setValues([auto]);
+    const fm = f.map((x, j) => j > 0 && x ? x : '');
+    fm.forEach((x, j) => { if (x) sh.getRange(nr, j + 1).setFormulaR1C1(x); });
+    try { sh.getRange(nr, 1).setNumberFormat(sh.getRange(row, 1).getNumberFormat()); } catch (e) {}
+    ctx.rows[cur] = nr;
+    row = nr;
+  }
+  ctx.maxD = d; ctx.maxRow = row;
+  return ctx.rows[d] || 0;
+}
+
+// hitung ulang tanggal-tanggal tertentu dan tulis ke kolom chat
+function adsWrite_(dates) {
+  const ss = ss_(), tz = ss.getSpreadsheetTimeZone();
+  const today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  const want = dates.filter(d => d && d >= ADS.start && d <= today).sort();
+  if (!want.length) return 0;
+  const set = {}; want.forEach(d => set[d] = { 'wa-vo': {}, 'wa-iz': {}, 'wa-ec': {} });
+  readAll_(ss).forEach(o => {
+    const c = ADS.map[String(o.sumber || '').trim()], d = adsIso_(o.created, tz);
+    if (c && set[d]) set[d][c][o.grup || o.id] = 1;   // 1 grup (banyak PT sekaligus) = 1 chat
+  });
+  const ctx = adsOpen_();
+  const rowsOf = {};
+  want.forEach(d => { const r = ctx.rows[d] || adsAppend_(ctx, d); if (r) rowsOf[d] = r; });
+  const ds = Object.keys(rowsOf).sort((a, b) => rowsOf[a] - rowsOf[b]);
+  if (!ds.length) return 0;
+  // tulis per blok baris yang berurutan (baris lain tidak disentuh)
+  const runs = [];
+  ds.forEach(d => { const L = runs[runs.length - 1]; if (L && rowsOf[d] === L.r + L.d.length) L.d.push(d); else runs.push({ r: rowsOf[d], d: [d] }); });
+  runs.forEach(run => ADS.cols.forEach(c => {
+    ctx.sh.getRange(run.r, ctx.cols[c], run.d.length, 1).setValues(run.d.map(d => [Object.keys(set[d][c]).length]));
+  }));
+  const rs = ds;
+  PropertiesService.getScriptProperties().setProperty('ADS_OK', new Date().toISOString());
+  PropertiesService.getScriptProperties().deleteProperty('ADS_ERR');
+  return rs.length;
+}
+
+function adsAllDates_() {
+  const tz = ss_().getSpreadsheetTimeZone(), out = [];
+  const today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  let d = new Date(Number(ADS.start.slice(0, 4)), Number(ADS.start.slice(5, 7)) - 1, Number(ADS.start.slice(8, 10)));
+  for (let i = 0; i < 4000; i++) {
+    const s = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    if (s > today) break;
+    out.push(s); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  }
+  return out;
+}
+
+// dipanggil pemicu harian: hitung ulang 7 hari terakhir
+function adsNightly() {
+  try { const a = adsAllDates_(); adsWrite_(a.slice(-7)); } catch (e) { adsErr_(e); }
+}
+
+// JALANKAN SEKALI dari editor Apps Script (pilih fungsi ini lalu klik Run) untuk:
+// memberi izin akses spreadsheet Google Ads, memasang pemicu harian, dan mengisi ulang sejak 1 November.
+function setupGoogleAds() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'adsNightly').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('adsNightly').timeBased().everyDays(1).atHour(1).create();
+  const n = adsWrite_(adsAllDates_());
+  Logger.log('Selesai: ' + n + ' tanggal diisi di sheet ' + ADS.sheet + '. Pemicu harian jam 01.00 terpasang.');
+}
+
+// admin: isi ulang semua tanggal sejak 1 November dari aplikasi
+function adsSync(token) {
+  const u = auth_(token);
+  if (u.role !== 'admin') throw new Error('FORBIDDEN');
+  try { return { n: adsWrite_(adsAllDates_()) }; } catch (e) { adsErr_(e); throw e; }
+}
+
+// admin: data chat & conversion per tanggal untuk kartu di Ringkasan
+function adsStats(token) {
+  const u = auth_(token);
+  if (u.role !== 'admin') throw new Error('FORBIDDEN');
+  const props = PropertiesService.getScriptProperties();
+  const ctx = adsOpen_();
+  const conv = ADS.cols.map(c => ctx.cols[c] + 1);
+  const rows = [];
+  Object.keys(ctx.rows).sort().forEach(d => {
+    const r = ctx.vals[ctx.rows[d] - 1];
+    if (!r) return;
+    const n = i => Number(r[i - 1]) || 0;
+    rows.push([d].concat(ADS.cols.map((c, k) => [n(ctx.cols[c]), n(conv[k])]).reduce((a, x) => a.concat(x), [])));
+  });
+  return { rows: rows, start: ADS.start, ok: props.getProperty('ADS_OK') || '', err: props.getProperty('ADS_ERR') || '' };
 }
