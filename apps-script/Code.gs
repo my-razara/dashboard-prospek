@@ -94,9 +94,37 @@ function json_(o) {
 const LAYOUT_SIG = FIELDS.map(f => f[0]).join(',');
 function ensureLayout_() {
   const props = PropertiesService.getScriptProperties();
-  if (props.getProperty('LAYOUT_SIG') === LAYOUT_SIG) return;
-  ensure_(ss_());
-  props.setProperty('LAYOUT_SIG', LAYOUT_SIG);
+  if (props.getProperty('LAYOUT_SIG') !== LAYOUT_SIG) {
+    ensure_(ss_());
+    props.setProperty('LAYOUT_SIG', LAYOUT_SIG);
+  }
+  if (!props.getProperty('LUNAS_FIX_1')) { fixLunas_(); props.setProperty('LUNAS_FIX_1', new Date().toISOString()); }
+}
+
+// sekali saja: data lama berstatus Lunas tapi masih ada sisa tagihan -> dicatat lunas
+// (tanggal pelunasan = tanggal pelunasan yang sudah ada, kalau kosong tanggal terakhir diupdate)
+function fixLunas_() {
+  const ss = ss_(), sh = ss.getSheetByName(SHEET_DATA), last = sh.getLastRow();
+  if (last < 2) return 0;
+  const tz = ss.getSpreadsheetTimeZone(), si = FIELDS.findIndex(f => f[0] === 'statuses');
+  const vals = sh.getRange(2, 1, last - 1, FIELDS.length).getValues();
+  let n = 0;
+  vals.forEach((r, i) => {
+    if (!r[ID_COL - 1] || String(r[si]).split(',').map(x => x.trim()).indexOf('Lunas') < 0) return;
+    const o = {};
+    FIELDS.forEach((f, j) => { let v = r[j]; if (v instanceof Date) v = Utilities.formatDate(v, tz, f[0] === 'updated' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'); o[f[0]] = v; });
+    o.statuses = String(o.statuses || '').split(',').map(x => x.trim()).filter(Boolean);
+    const mo = money_(o);
+    if (!mo.gross || mo.sisa <= 0) return;
+    if (!o.tglLunas) o.tglLunas = String(o.updated || '').slice(0, 10) || Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    const keepUpd = o.updated;
+    const row = toRow_(o, r);
+    row[FIELDS.findIndex(f => f[0] === 'updated')] = keepUpd;
+    sh.getRange(i + 2, 1, 1, row.length).setValues([row]);
+    n++;
+  });
+  if (n) bump_();
+  return n;
 }
 
 function route_(q) {
@@ -615,7 +643,14 @@ function toRow_(o, ex) {
   const st = Array.isArray(o.statuses) ? o.statuses : [];
   let c = -1;
   PROC.forEach((s, i) => { if (st.indexOf(s) >= 0) c = i; });
-  const mo = money_(o);
+  let mo = money_(o);
+  // status Lunas dicentang tapi masih ada sisa -> catat pelunasan otomatis
+  if (st.indexOf('Lunas') >= 0 && mo.gross && mo.sisa > 0) {
+    const tz = Session.getScriptTimeZone(), t = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    o = Object.assign({}, o, { lunas: (Number(o.lunas) || 0) + mo.sisa, tglLunas: o.tglLunas ? adsIso_(o.tglLunas, tz) || t : t });
+    if (!String(o.invNo || '').trim() || !o.invDate || o.invDate < o.tglLunas) o.invDate = o.tglLunas;
+    mo = money_(o);
+  }
   const x = Object.assign({}, o, mo.items ? { invItems: mo.items } : {}, {
     priceDeal: mo.gross ? mo.net : (o.priceDeal === '' || o.priceDeal == null ? '' : 0),
     statuses: st.join(', '),
@@ -1174,4 +1209,18 @@ function setupPengingat() {
     MailApp.sendEmail({ to: me, subject: '[Contoh] Pengingat pagi untuk ' + pic.name, htmlBody: remHtml_(pic.name, t, today), name: 'Monitoring Prospek' });
     Logger.log('Contoh pengingat (data ' + pic.name + ') dikirim ke ' + me);
   }
+}
+
+/* ---------------- Bersih-bersih sheet yang tidak dipakai aplikasi ---------------- */
+// JALANKAN dari editor Apps Script (pilih fungsi ini lalu Run). Menghapus semua tab di spreadsheet database
+// selain yang dipakai aplikasi. Kalau ada yang ternyata masih perlu, kembalikan lewat File > Riwayat versi.
+const SHEETS_DIPAKAI = [SHEET_DATA, SHEET_SET, SHEET_USER, SHEET_INV, SHEET_BUDGET];
+function hapusSheetTakTerpakai() {
+  const ss = ss_(), hapus = ss.getSheets().filter(sh => SHEETS_DIPAKAI.indexOf(sh.getName()) < 0);
+  if (!hapus.length) { Logger.log('Tidak ada sheet yang perlu dihapus.'); return []; }
+  const names = hapus.map(sh => sh.getName());
+  hapus.forEach(sh => ss.deleteSheet(sh));
+  Logger.log('Dihapus (' + names.length + '): ' + names.join(', '));
+  Logger.log('Tersisa: ' + ss.getSheets().map(sh => sh.getName()).join(', '));
+  return names;
 }

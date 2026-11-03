@@ -1350,7 +1350,15 @@ function enqueue(op,id,rec){
   queue=queue.filter(o=>o.id!==id);queue.push({seq:++seq,op,id,rec});
   items=applyQueue(serverItems);saveLocal();render();syncState();scheduleSync(300);
 }
-async function persist(p){enqueue("save",p.id,p)}
+// status "Lunas" dicentang tapi masih ada sisa tagihan -> otomatis dicatat lunas (invoice, tugas & kwitansi ikut beres)
+function autoLunas(p){
+  if(!has(p,"Lunas"))return p;
+  const m=money(p);if(!m.gross||m.sisa<=0)return p;
+  const np=Object.assign({},p,{lunas:N(p.lunas)+m.sisa,tglLunas:p.tglLunas||TODAY});
+  if(!np.bankLunas&&typeof bankDefault==="function"){try{np.bankLunas=np.bankDp||bankDefault(np)}catch(e){}}
+  np.priceDeal=money(np).net;payDateInv(np);return np;
+}
+async function persist(p){p=autoLunas(p);enqueue("save",p.id,p)}
 async function remove(id){enqueue("del",id)}
 async function persistSettings(s){
   if(!navigator.onLine)throw new Error("OFFLINE");
