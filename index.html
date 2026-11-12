@@ -242,6 +242,9 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 .opill{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--deal-soft);color:var(--ok-ink);white-space:nowrap;margin-left:4px;vertical-align:1px}
 .dup-box .mkrep{align-self:flex-start;margin-top:4px}
 .gpill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--step-soft);color:var(--accent-ink);border:0;cursor:pointer;white-space:nowrap}
+.inv-opt{display:flex;gap:10px 14px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);flex:none}
+.inv-opt label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--ink-2);flex:1 1 240px;min-width:0}
+.inv-opt select{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:7px 10px;font-size:13.5px;color:var(--ink);min-width:0;max-width:100%}
 .inv-grp{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .dup-hint{color:var(--warn-ink);font-weight:600}
 .dup-hint.dup-box{display:flex;flex-direction:column;gap:3px;margin-top:6px;padding:9px 11px;border-radius:10px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink);font-weight:500;font-size:12.5px;line-height:1.45}
@@ -1055,6 +1058,7 @@ dialog .mb{overflow-x:hidden}
   <div class="kat" id="invMode" hidden><button type="button" data-im="inv" id="invTab">Proforma</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
   <div class="inote" id="invNote" hidden></div>
   <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
+  <div class="inv-opt" id="invOpt"><label>Rekening tujuan &amp; atas nama<select id="invRekSel"></select></label><label>Logo<select id="invLogoSel"></select></label></div>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
 </dialog>
 <div id="printArea" aria-hidden="true"></div>
@@ -2119,10 +2123,14 @@ function renderRek(sel){
 }
 F2.invBrand.addEventListener("change",()=>{if(!rekTouched)renderRek(null)});
 let rekTouched=false;$("#rekChips").addEventListener("change",()=>rekTouched=true);
-const rekOf=p=>{try{const a=JSON.parse(p.invRek||"[]");return Array.isArray(a)?a:[]}catch(e){return []}};
+const rekRaw=p=>{try{const a=JSON.parse(p.invRek||"[]");return Array.isArray(a)?a.map(String):[]}catch(e){return []}};
+const rekOf=p=>rekRaw(p).filter(x=>!/^logo:/.test(x));
+// pilihan logo invoice disimpan di kolom Rekening Invoice sebagai "logo:<brand>" ("logo:__none" = tanpa logo)
+const logoOf=p=>{const a=rekRaw(p).find(x=>/^logo:/.test(x));return a?a.slice(5):""};
+const rekWith=(keys,logo)=>JSON.stringify(keys.concat(logo?["logo:"+logo]:[]));
 function invFormRead(){
   const v=k=>String(F2[k].value||"").trim();
-  return {invBrand:v("invBrand"),invNo:v("invNo"),invDate:v("invDate")||TODAY,invDue:v("invDue"),invRek:JSON.stringify([...document.querySelectorAll('#rekChips input[name="rek"]:checked')].map(c=>c.value)),email:v("email"),alamat:v("alamat"),ppn:v("layanan")==="Sewa Virtual Office"?v("ppn"):"",invItems:JSON.stringify(readItems())};
+  return {invBrand:v("invBrand"),invNo:v("invNo"),invDate:v("invDate")||TODAY,invDue:v("invDue"),invRek:(()=>{const cur=editingId?items.find(x=>x.id===editingId):null;return rekWith([...document.querySelectorAll('#rekChips input[name="rek"]:checked')].map(c=>c.value),cur?logoOf(cur):"")})(),email:v("email"),alamat:v("alamat"),ppn:v("layanan")==="Sewa Virtual Office"?v("ppn"):"",invItems:JSON.stringify(readItems())};
 }
 $("#invFromForm").onclick=()=>{showInvAfter=true;if(frm.requestSubmit)frm.requestSubmit();else frm.dispatchEvent(new Event("submit",{cancelable:true}))};
 // render
@@ -2135,12 +2143,16 @@ function invCalc(p){
   // rekening yang dipilih; penerbit invoice = atas nama rekening pertama (mis. CV. Mitra Konsultasi)
   const pick=rekOf(p),all=allRekening(),bk=pick.length?all.filter(x=>pick.includes(x.key)):banksOf(b);
   const issuer=(bk[0]&&bk[0].an)||b.legal||b.brand;
-  return {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer};
+  // logo: pilihan di invoice; otomatis = logo brand invoice (Sewa Virtual Office tanpa logo)
+  const L=logoOf(p),lb=L&&L!=="__none"?invProfile(L):null;
+  const logo=L==="__none"?"":lb?(lb.logo||""):(p.layanan!=="Sewa Virtual Office"?b.logo:"");
+  const warna=(lb&&lb.warna)||b.warna||"#14213D";
+  return {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer,logo,warna};
 }
 function invHTML(p){
-  const {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer}=invCalc(p);
-  // Sewa Virtual Office: tanpa logo. Kalau logo dipakai, nama brand tidak ditulis lagi.
-  const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
+  const {b,its,sub,disk,pph,dp,lun,ppn,total,paid,sisa,bk,issuer,logo,warna}=invCalc(p);
+  // Kalau logo dipakai, nama brand tidak ditulis lagi.
+  const useLogo=!!logo;
   const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
   const fin=isFinalInv(p),docDate=fin?(p.tglLunas||p.invDate):(N(p.dp)>0&&p.tglDp)||p.invDate||p.created;
   const terms=isPaid?"Lunas":paid?"2/2":"1/2";
@@ -2149,9 +2161,9 @@ function invHTML(p){
   const R=n=>"IDR "+Math.round(N(n)).toLocaleString("en-US")+".00";
   const br=t=>esc(t).replace(/\n/g,"<br>");
   const tr=(l,v,c)=>`<div class="iv-r${c?" "+c:""}"><span>${l}</span><b>${v}</b></div>`;
-  return `<div class="inv iv" style="--acc:${esc(b.warna||"#14213D")}">
+  return `<div class="inv iv" style="--acc:${esc(warna)}">
   <div class="iv-head">
-    <div class="iv-logo">${useLogo?`<img src="${b.logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
+    <div class="iv-logo">${useLogo?`<img src="${logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
     <div class="iv-title"><h1${fin?"":` class="pf"`}>${fin?"INVOICE":"PROFORMA INVOICE"}</h1><div class="iv-no"># ${p.invNo?esc(p.invNo):`<span class="muted">${draft?"belum diterbitkan":"menunggu sinkron"}</span>`}</div></div>
   </div>
   <div class="iv-info">
@@ -2184,8 +2196,8 @@ function invHTML(p){
 // ---------- kwitansi (bukti terima DP / pelunasan) ----------
 const kwNo=(p,mode)=>p.invNo?"KW/"+p.invNo+"/"+(mode==="dp"?"DP":"L"):"";
 function kwHTML(p,mode){
-  const {b,its,total,dp,lun,pph,sisa,bk,issuer}=invCalc(p);
-  const useLogo=!!b.logo&&p.layanan!=="Sewa Virtual Office";
+  const {b,its,total,dp,lun,pph,sisa,bk,issuer,logo,warna}=invCalc(p);
+  const useLogo=!!logo;
   const isDp=mode==="dp",amt=isDp?dp:lun,tgl=(isDp?p.tglDp:p.tglLunas)||TODAY;
   const before=isDp?0:dp,after=isDp?Math.max(0,total-dp):sisa;
   const R=n=>"Rp "+Math.round(N(n)).toLocaleString("id-ID");
@@ -2195,9 +2207,9 @@ function kwHTML(p,mode){
   const br=t=>esc(t).replace(/\n/g,"<br>");
   const row=(l,v)=>`<div class="kw-row"><span>${l}</span><div>${v}</div></div>`;
   const no=kwNo(p,mode);
-  return `<div class="inv iv kw" style="--acc:${esc(b.warna||"#14213D")}">
+  return `<div class="inv iv kw" style="--acc:${esc(warna)}">
   <div class="iv-head">
-    <div class="iv-logo">${useLogo?`<img src="${b.logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
+    <div class="iv-logo">${useLogo?`<img src="${logo}" alt="${esc(b.brand)}">`:`<div class="iv-mark">${esc(b.brand)}</div>`}</div>
     <div class="iv-title"><h1>KWITANSI</h1><div class="iv-no"># ${no?esc(no):`<span class="muted">menunggu nomor invoice</span>`}</div></div>
   </div>
   <div class="kw-from"><b>${esc(issuer)}</b>${b.alamat?`<div>${br(b.alamat)}</div>`:""}${[b.telp,b.email,b.web].filter(Boolean).length?`<div>${[b.telp,b.email,b.web].filter(Boolean).map(esc).join(" · ")}</div>`:""}</div>
@@ -2250,11 +2262,32 @@ function paintInv(p){
   $("#invMode").hidden=!hasD&&!hasL;
   document.querySelectorAll("#invMode [data-im]").forEach(x=>{x.hidden=(x.dataset.im==="dp"&&!hasD)||(x.dataset.im==="lunas"&&!hasL);x.classList.toggle("on",x.dataset.im===invMode)});
   $("#invTtl").textContent=invMode==="inv"?(isFinalInv(p)?"Invoice":"Proforma invoice"):"Kwitansi";$("#invTab").textContent=isFinalInv(p)?"Invoice":"Proforma invoice";
+  invOptFill(p);
   $("#invDoc").innerHTML=docHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
   fitInv();
 }
+// pilihan rekening & logo langsung di jendela invoice (disimpan ke data; grup gabungan -> data pemimpin grup)
+function invOptRec(){const p=items.find(x=>x.id===invId);if(!p)return null;return invCombine&&groupOf(p).length>1?(groupOf(p).find(x=>x.id===x.grup)||p):p}
+function invOptFill(t){
+  const rec=invOptRec()||t,all=allRekening(),cur=rekOf(rec),L=logoOf(rec),b=invBrandFor(brandOf(rec));
+  const brand=rec.invBrand||b,def=banksOf(invProfile(brand));
+  let o=`<option value="">Otomatis · rekening ${esc(brand)}${def[0]?" ("+esc(def[0].bank)+" a.n. "+esc(def[0].an||"–")+")":""}</option>`;
+  if(cur.length>1)o+=`<option value="__keep">${cur.length} rekening (pilihan di form)</option>`;
+  o+=all.map(x=>`<option value="${esc(x.key)}">${esc(x.bank)} ${esc(x.norek)} · a.n. ${esc(x.an||"–")}</option>`).join("");
+  const rs=$("#invRekSel");rs.innerHTML=o;rs.value=cur.length>1?"__keep":cur.length===1?cur[0]:"";if(rs.value===""&&cur.length===1)rs.value="";
+  const ls=$("#invLogoSel");
+  ls.innerHTML=`<option value="">Otomatis · logo ${esc(brand)}</option>`+INV_BRANDS.map(n=>{const has=!!invProfile(n).logo;return `<option value="${esc(n)}"${has?"":" disabled"}>Logo ${esc(n)}${has?"":" (belum diupload)"}</option>`}).join("")+`<option value="__none">Tanpa logo (tulisan nama brand)</option>`;
+  ls.value=L;
+}
+async function invOptSave(){
+  const rec=invOptRec();if(!rec)return;
+  const rv=$("#invRekSel").value,keys=rv==="__keep"?rekOf(rec):rv?[rv]:[];
+  const np=Object.assign({},rec,{invRek:rekWith(keys,$("#invLogoSel").value),updated:TODAY});delete np.status;
+  await persist(np);refreshInvoice();toast("Pilihan invoice disimpan");
+}
+$("#invRekSel").addEventListener("change",invOptSave);$("#invLogoSel").addEventListener("change",invOptSave);
 function openInvoice(id,mode){const p=items.find(x=>x.id===id);if(!p)return;invId=id;invMode=mode||"inv";if(!$("#invDlg").open)$("#invDlg").showModal();paintInv(p);requestAnimationFrame(fitInv);loadPdfLib().catch(()=>{})}
 function refreshInvoice(){if(!invId||!$("#invDlg").open)return;const p=items.find(x=>x.id===invId);if(p)paintInv(p);else $("#invDlg").close()}
 window.addEventListener("resize",fitInv);
