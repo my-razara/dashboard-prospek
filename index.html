@@ -329,6 +329,10 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .pb-pic{display:inline-flex;align-items:center;gap:8px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line)}
 @media (max-width:767px){.pb-pic{margin-left:0;padding-left:0;border-left:0;flex:1 1 100%}.pb-pic select{flex:1}}
 .hb-note{font-size:12px;color:var(--ink-3);margin-top:6px}
+.wa-next{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:9999;display:flex;align-items:center;gap:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 8px 24px rgba(15,23,42,.18);border-radius:14px;padding:10px 12px;font-size:13.5px;width:min(460px,calc(100vw - 24px))}
+.wa-next span{flex:1}.wa-next .btn{text-decoration:none;white-space:nowrap}
+#waDlg .mf .btn{white-space:nowrap}
+#waDlg #waGo:not(.primary){background:var(--panel);color:var(--ink);border-color:var(--line)}
 .tgs.lq b{color:var(--accent-ink)}
 #lqSec[hidden]{display:none}
 #repRange[hidden]{display:none!important}
@@ -1083,7 +1087,7 @@ dialog .mb{overflow-x:hidden}
     <textarea id="waText" rows="9" aria-label="Isi pesan"></textarea>
     <p class="hint" style="margin:6px 0 0">Pesan bisa diubah dulu sebelum dikirim. Template diatur admin di Pengaturan.</p>
   </div>
-  <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" id="waCopy">Salin</button><a class="btn primary wa-go" id="waGo" href="#" target="_blank" rel="noopener">Buka WhatsApp</a></div></div>
+  <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" id="waCopy">Salin</button><a class="btn primary wa-go" id="waGo" href="#" target="_blank" rel="noopener">Buka WhatsApp</a><button class="btn primary" type="button" id="waPdf" hidden>Kirim + PDF</button></div></div>
 </dialog>
 <dialog id="lqDlg" class="paydlg" aria-labelledby="lqTtl">
   <form id="lqFrm" novalidate>
@@ -2251,12 +2255,12 @@ function groupInvoice(p){
 }
 function invTarget(p){return invCombine&&groupOf(p).length>1?groupInvoice(p):p}
 // dokumen di dialog: invoice / kwitansi DP / kwitansi pelunasan
-let invMode="inv",shareReady=null;
+let invMode="inv";
 const docHTML=t=>invMode==="inv"?invHTML(t):kwHTML(t,invMode);
 const docTpl=()=>invMode==="dp"?"TQDP":invMode==="lunas"?"TQLUNAS":"INV";
 function paintInv(p){
   const multi=groupOf(p).length>1;$("#invGrpWrap").hidden=!multi;$("#invGrp").checked=invCombine;
-  p=invTarget(p);shareReady=null;$("#invShare").textContent="Kirim ke WA";
+  p=invTarget(p);$("#invShare").textContent="Kirim ke WA";
   const hasD=N(p.dp)>0,hasL=N(p.lunas)>0;
   if((invMode==="dp"&&!hasD)||(invMode==="lunas"&&!hasL))invMode="inv";
   $("#invMode").hidden=!hasD&&!hasL;
@@ -2266,7 +2270,7 @@ function paintInv(p){
   $("#invDoc").innerHTML=docHTML(p);
   $("#invNote").textContent=invStage(p)?"Nomor invoice terisi otomatis setelah data tersinkron ke Google Sheets.":"Ini masih draf. Nomor invoice baru diterbitkan setelah status Waiting DP dicentang.";$("#invNote").hidden=!!p.invNo;
   $("#invDoc").querySelectorAll("img").forEach(i=>i.addEventListener("load",fitInv));
-  fitInv();
+  fitInv();prepInvPdf();
 }
 // pilihan rekening & logo langsung di jendela invoice (disimpan ke data; grup gabungan -> data pemimpin grup)
 function invOptRec(){const p=items.find(x=>x.id===invId);if(!p)return null;return invCombine&&groupOf(p).length>1?(groupOf(p).find(x=>x.id===x.grup)||p):p}
@@ -2297,7 +2301,8 @@ function loadPdfLib(){
   pdfLib=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js";sc.onload=()=>res();sc.onerror=()=>{pdfLib=null;sc.remove();rej(new Error("PDFLIB"))};document.head.appendChild(sc)});
   return pdfLib;
 }
-const invFile=p=>(((invMode==="inv"?(p.invNo?(isFinalInv(p)?"":"Proforma ")+p.invNo:""):kwNo(p,invMode))||((invMode==="inv"?(isFinalInv(p)?"invoice ":"proforma ")+"":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
+const invFile=p=>invFileFor(p,invMode);
+const invFileFor=(p,invMode)=>(((invMode==="inv"?(p.invNo?(isFinalInv(p)?"":"Proforma ")+p.invNo:""):kwNo(p,invMode))||((invMode==="inv"?(isFinalInv(p)?"invoice ":"proforma ")+"":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
 function printInv(){
   const p=items.find(x=>x.id===invId);if(!p)return;
   $("#printArea").innerHTML=docHTML(invTarget(p));document.body.classList.add("printing");
@@ -2314,26 +2319,67 @@ async function pdfWorker(p){
   return window.html2pdf().set({margin:0,filename:invFile(invTarget(p)),image:{type:"jpeg",quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",windowWidth:794},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(area.firstElementChild);
 }
 $("#invMode").addEventListener("click",e=>{const b=e.target.closest("[data-im]");if(!b)return;invMode=b.dataset.im;refreshInvoice()});
-// kirim ke WhatsApp: di HP lewat menu Bagikan (PDF langsung terlampir); di laptop PDF diunduh + chat WA dibuka
+// ---------- kirim PDF ke WhatsApp ----------
+// Di HP: menu Bagikan dengan PDF + pesan sekaligus. PDF disiapkan duluan di belakang layar supaya
+// menu Bagikan langsung terbuka saat tombol ditekan (kalau kelamaan, browser membatalkan menu Bagikan).
+// Di laptop: chat WA dibuka dengan pesannya + PDF diunduh untuk ditarik ke chat.
 const canShareFiles=()=>{try{return !!(navigator.canShare&&navigator.share&&window.matchMedia("(pointer:coarse)").matches&&navigator.canShare({files:[new File(["x"],"x.pdf",{type:"application/pdf"})]}))}catch(e){return false}};
-async function shareFile(file,msg){
-  try{await navigator.share({files:[file],text:msg});toast("Pilih WhatsApp lalu kontak kliennya")}
-  catch(e){if(e&&e.name==="AbortError")return;if(e&&e.name==="NotAllowedError"){shareReady={id:invId,mode:invMode,file};$("#invShare").textContent="PDF siap · Ketuk kirim";return}toast("Gagal membagikan. Pakai Download PDF.")}
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const DOC_TPL={INV:"inv",TAGIH:"inv",TQDP:"dp",TQLUNAS:"lunas"};
+const docHTMLFor=(t,mode)=>mode==="inv"?invHTML(t):kwHTML(t,mode);
+const docTarget=rec=>invCombine&&groupOf(rec).length>1?groupInvoice(rec):rec;
+const docModeOk=(t,mode)=>mode==="inv"||(mode==="dp"&&N(t.dp)>0)||(mode==="lunas"&&N(t.lunas)>0);
+let pdfQ=Promise.resolve();const pdfCache=new Map();
+function pdfEntry(rec,mode){
+  const t=docTarget(rec),html=docHTMLFor(t,mode),name=invFileFor(t,mode);
+  let e=pdfCache.get(html);if(e)return e;
+  e={file:null,name};
+  e.p=(pdfQ=pdfQ.catch(()=>{}).then(async()=>{
+    await loadPdfLib();
+    const area=$("#printArea");area.innerHTML=html;
+    await Promise.all([...area.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const blob=await window.html2pdf().set({margin:0,image:{type:"jpeg",quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:"#ffffff",windowWidth:794},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["css","legacy"]}}).from(area.firstElementChild).outputPdf("blob");
+    e.file=new File([blob],name,{type:"application/pdf"});return e.file;
+  }));
+  e.p.catch(()=>pdfCache.delete(html));
+  pdfCache.set(html,e);if(pdfCache.size>6)pdfCache.delete(pdfCache.keys().next().value);
+  return e;
 }
+// iPhone: WhatsApp sering hanya mengambil file PDF-nya, jadi tawarkan kirim teksnya di chat yang sama
+function waNext(wa,msg){
+  let el=$("#waNext");if(!el){el=document.createElement("div");el.id="waNext";el.className="wa-next";document.body.appendChild(el)}
+  el.innerHTML=`<span>PDF terkirim. Pesan teksnya belum ikut?</span><a class="btn sm primary" target="_blank" rel="noopener" href="${esc(wa+"?text="+encodeURIComponent(msg))}">Kirim pesannya</a><button type="button" class="x" aria-label="Tutup">×</button>`;
+  el.querySelector("button").onclick=()=>el.remove();el.querySelector("a").onclick=()=>setTimeout(()=>el.remove(),300);
+  clearTimeout(waNext.t);waNext.t=setTimeout(()=>el.remove(),20000);
+}
+// hasil: "ok" | "retry" (PDF sudah siap, ketuk sekali lagi) | "fail"
+async function shareDoc(file,msg,wa){
+  try{await navigator.share({files:[file],text:msg});
+    if(isIOS()&&wa)waNext(wa,msg);else toast("Pilih WhatsApp lalu kontak kliennya");return "ok"}
+  catch(e){if(e&&e.name==="AbortError")return "ok";if(e&&e.name==="NotAllowedError")return "retry";toast("Gagal membagikan. Pakai Download PDF.");return "fail"}
+}
+// alur lengkap untuk 1 tombol
+async function sendDocWA(rec,mode,msg,btn,label){
+  const w=waLink(rec.wa),mobile=canShareFiles(),e=pdfEntry(rec,mode);
+  try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(_){}
+  if(!mobile){
+    if(w)window.open(w+"?text="+encodeURIComponent(msg),"_blank","noopener");
+    btn.disabled=true;btn.textContent="Menyiapkan PDF…";
+    try{const f=await e.p;const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+      toast(w?"PDF diunduh. Tarik file PDF-nya ke chat WhatsApp yang terbuka.":"PDF diunduh. Nomor WA klien belum diisi.");return true}
+    catch(err){toast(navigator.onLine?"Gagal membuat PDF, pakai Cetak → Simpan sebagai PDF":"Butuh internet sekali untuk fitur PDF.");return false}
+    finally{btn.disabled=false;btn.textContent=label}
+  }
+  if(e.file){const r=await shareDoc(e.file,msg,w);return r!=="fail"&&r!=="retry"?true:(r==="retry"?(btn.textContent="PDF siap · Ketuk kirim",false):false)}
+  btn.disabled=true;btn.textContent="Menyiapkan PDF…";
+  try{const f=await e.p;btn.disabled=false;btn.textContent=label;const r=await shareDoc(f,msg,w);if(r==="retry"){btn.textContent="PDF siap · Ketuk kirim";return false}return r==="ok"}
+  catch(err){btn.disabled=false;btn.textContent=label;toast(navigator.onLine?"Gagal membuat PDF. Coba lagi.":"Butuh internet sekali untuk fitur PDF.");return false}
+}
+function prepInvPdf(){clearTimeout(prepInvPdf.t);prepInvPdf.t=setTimeout(()=>{if(!$("#invDlg").open||!canShareFiles())return;const p=items.find(x=>x.id===invId);if(p)pdfEntry(p,invMode).p.catch(()=>{})},500)}
 $("#invShare").onclick=async()=>{
-  const p=items.find(x=>x.id===invId);if(!p)return;const t=invTarget(p),msg=waMsg(t,docTpl()),w=waLink(p.wa),b=$("#invShare");
-  try{navigator.clipboard&&navigator.clipboard.writeText(msg).catch(()=>{})}catch(e){}
-  if(shareReady&&shareReady.id===invId&&shareReady.mode===invMode){const f=shareReady.file;shareReady=null;b.textContent="Kirim ke WA";return shareFile(f,msg)}
-  const mobile=canShareFiles();
-  // laptop: buka chat WA sekarang (sebelum proses PDF, supaya tidak diblokir browser)
-  if(!mobile&&w)window.open(w+"?text="+encodeURIComponent(msg),"_blank","noopener");
-  b.disabled=true;b.textContent="Menyiapkan PDF…";
-  try{
-    const wk=await pdfWorker(p);
-    if(mobile){const blob=await wk.outputPdf("blob");b.disabled=false;b.textContent="Kirim ke WA";await shareFile(new File([blob],invFile(t),{type:"application/pdf"}),msg)}
-    else{await wk.save();toast(w?"PDF diunduh. Tarik file PDF-nya ke chat WhatsApp yang terbuka.":"PDF diunduh. Nomor WA klien belum diisi.")}
-  }catch(e){toast(navigator.onLine?"Gagal membuat PDF, pakai Cetak → Simpan sebagai PDF":"Butuh internet sekali untuk fitur PDF.")}
-  finally{b.disabled=false;if(!shareReady)b.textContent="Kirim ke WA"}
+  const p=items.find(x=>x.id===invId);if(!p)return;
+  await sendDocWA(p,invMode,waMsg(docTarget(p),docTpl()),$("#invShare"),"Kirim ke WA");
 };
 $("#invPdf").onclick=async()=>{
   const p=items.find(x=>x.id===invId);if(!p)return;const b=$("#invPdf");b.disabled=true;b.textContent="Menyiapkan PDF…";
@@ -2863,6 +2909,12 @@ function waPaint(k){
   const p=items.find(x=>x.id===waPickId);if(!p)return;
   document.querySelectorAll("#waSeg [data-wk]").forEach(b=>b.classList.toggle("on",b.dataset.wk===k));
   $("#waText").value=k?waMsg(p,k):"";waHref();
+  // template proforma / invoice / kwitansi: kirim pesan sekaligus PDF-nya
+  const mode=DOC_TPL[k],ok=!!mode&&docModeOk(docTarget(p),mode);
+  $("#waPdf").hidden=!ok;$("#waPdf").dataset.mode=ok?mode:"";
+  $("#waPdf").textContent=ok?(mode==="inv"?(isFinalInv(docTarget(p))?"Kirim + PDF invoice":"Kirim + PDF proforma"):"Kirim + PDF kwitansi"):"Kirim + PDF";
+  $("#waGo").textContent=ok?"Teks saja":"Buka WhatsApp";$("#waGo").classList.toggle("primary",!ok);
+  if(ok&&canShareFiles())pdfEntry(p,mode).p.catch(()=>{});
 }
 function waHref(){const p=items.find(x=>x.id===waPickId);const w=p?waLink(p.wa):"",t=$("#waText").value.trim();$("#waGo").href=w?(t?w+"?text="+encodeURIComponent(t):w):"#"}
 function openWaPick(id,def){
@@ -2876,6 +2928,10 @@ function openWaPick(id,def){
 $("#waSeg").addEventListener("click",e=>{const b=e.target.closest("[data-wk]");if(b)waPaint(b.dataset.wk)});
 $("#waText").addEventListener("input",waHref);
 $("#waGo").addEventListener("click",()=>setTimeout(()=>$("#waDlg").close(),300));
+$("#waPdf").onclick=async()=>{
+  const p=items.find(x=>x.id===waPickId);if(!p)return;const b=$("#waPdf"),lbl=b.textContent.replace("PDF siap · Ketuk kirim","Kirim + PDF");
+  const done=await sendDocWA(p,b.dataset.mode,$("#waText").value.trim(),b,lbl);if(done)$("#waDlg").close();
+};
 $("#waCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#waText").value);toast("Pesan disalin")}catch(e){$("#waText").select();toast("Tekan lama lalu salin")}};
 // ---------- input cepat ----------
 let quickMode=ls.get("pm_quick",true);
