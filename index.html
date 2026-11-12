@@ -632,6 +632,8 @@ dialog .mb{overflow-x:hidden}
 #waSeg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
 #waSeg button{flex:1 0 auto;white-space:nowrap;min-height:36px;padding:0 12px}
 #waDlg .wa-go{display:inline-flex;align-items:center;justify-content:center;background:#16a34a;border-color:#16a34a;color:#fff;text-decoration:none}
+/* warna invoice tetap tercetak walau opsi 'Background graphics' di Chrome tidak dicentang */
+#printArea,#printArea *,#invDoc,#invDoc *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
 @media print{@page{size:A4;margin:0}body.printing{padding:0!important;background:#fff}body.printing>*:not(#printArea){display:none!important}body.printing #printArea{position:static;left:0}}
 
 @media (max-width:767px){
@@ -2305,8 +2307,12 @@ const invFile=p=>invFileFor(p,invMode);
 const invFileFor=(p,invMode)=>(((invMode==="inv"?(p.invNo?(isFinalInv(p)?"":"Proforma ")+p.invNo:""):kwNo(p,invMode))||((invMode==="inv"?(isFinalInv(p)?"invoice ":"proforma ")+"":"kwitansi ")+p.nama)).replace(/[\\/:*?"<>|]+/g,"-").trim()||"invoice")+".pdf";
 function printInv(){
   const p=items.find(x=>x.id===invId);if(!p)return;
-  $("#printArea").innerHTML=docHTML(invTarget(p));document.body.classList.add("printing");
-  setTimeout(()=>{window.print();setTimeout(()=>document.body.classList.remove("printing"),800)},80);
+  const t=invTarget(p);$("#printArea").innerHTML=docHTML(t);document.body.classList.add("printing");
+  // nama file saat "Simpan sebagai PDF" = nomor proforma / invoice / kwitansi
+  const old=document.title;document.title=invFile(t).replace(/\.pdf$/,"");
+  const done=()=>{document.body.classList.remove("printing");document.title=old;window.removeEventListener("afterprint",done)};
+  window.addEventListener("afterprint",done);
+  setTimeout(()=>{window.print();setTimeout(done,1500)},80);
 }
 $("#invPrint").onclick=printInv;
 $("#invGrp").addEventListener("change",e=>{invCombine=e.target.checked;refreshInvoice()});
