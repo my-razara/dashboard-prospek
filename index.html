@@ -243,6 +243,20 @@ dialog form{display:flex;flex-direction:column;max-height:92vh}
 .dup-box .mkrep{align-self:flex-start;margin-top:4px}
 .gpill{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--step-soft);color:var(--accent-ink);border:0;cursor:pointer;white-space:nowrap}
 .inv-opt{display:flex;gap:10px 14px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);flex:none}
+.inv-rek{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--ink-2);flex:1 1 300px;min-width:0;position:relative}
+.inv-rek small{font-weight:500;color:var(--ink-3)}
+#invRekBox summary{list-style:none;cursor:pointer;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:7px 30px 7px 10px;font-size:13.5px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+#invRekBox summary::-webkit-details-marker{display:none}
+#invRekBox summary::after{content:"▾";position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+#invRekBox[open] summary::after{content:"▴"}
+#invRekList{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(15,23,42,.16);padding:8px;max-height:280px;overflow:auto}
+#invRekList .rk{display:flex;flex-direction:row;flex:none;gap:10px;align-items:flex-start;padding:8px;border-radius:8px;cursor:pointer;font-weight:500}
+#invRekList .rk:hover{background:var(--bg)}
+#invRekList .rk input{margin-top:3px;width:17px;height:17px;flex:none}
+#invRekList .rk span{display:flex;flex-direction:column;min-width:0}
+#invRekList .rk b{font-size:13.5px;color:var(--ink)}
+#invRekList .rk small{font-size:12px}
+#invRekList .btn{margin:6px 0 0 8px}
 .inv-opt label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--ink-2);flex:1 1 240px;min-width:0}
 .inv-opt select{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:7px 10px;font-size:13.5px;color:var(--ink);min-width:0;max-width:100%}
 .inv-grp{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
@@ -1064,7 +1078,7 @@ dialog .mb{overflow-x:hidden}
   <div class="kat" id="invMode" hidden><button type="button" data-im="inv" id="invTab">Proforma</button><button type="button" data-im="dp">Kwitansi DP</button><button type="button" data-im="lunas">Kwitansi pelunasan</button></div>
   <div class="inote" id="invNote" hidden></div>
   <label class="inv-grp" id="invGrpWrap" hidden style="padding:8px 16px;border-bottom:1px solid var(--line)"><input type="checkbox" id="invGrp" checked> Gabungkan semua PT di grup ini jadi 1 invoice</label>
-  <div class="inv-opt" id="invOpt"><label>Rekening tujuan &amp; atas nama<select id="invRekSel"></select></label><label>Logo<select id="invLogoSel"></select></label></div>
+  <div class="inv-opt" id="invOpt"><div class="inv-rek"><span>Rekening tujuan &amp; atas nama <small>(boleh lebih dari 1)</small></span><details id="invRekBox"><summary id="invRekSum"></summary><div id="invRekList"></div></details></div><label>Logo<select id="invLogoSel"></select></label></div>
   <div id="invBody"><div id="invScale"><div id="invDoc"></div></div></div>
 </dialog>
 <div id="printArea" aria-hidden="true"></div>
@@ -2161,7 +2175,7 @@ function invHTML(p){
   const useLogo=!!logo;
   const draft=!p.invNo&&!invStage(p),isPaid=!!sub&&sisa<=0&&!draft;
   const fin=isFinalInv(p),docDate=fin?(p.tglLunas||p.invDate):(N(p.dp)>0&&p.tglDp)||p.invDate||p.created;
-  const terms=isPaid?"Lunas":paid?"2/2":"1/2";
+  const terms=fin?"2/2":"1/2"; // proforma = 1/2, invoice (sudah pelunasan) = 2/2
   const fd=s=>s?new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"–";
   const fds=s=>new Date(s+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
   const R=n=>"IDR "+Math.round(N(n)).toLocaleString("en-US")+".00";
@@ -2192,7 +2206,7 @@ function invHTML(p){
   </div>
   <div class="iv-say"><span>Terbilang</span>${terbilang(sisa>0?sisa:total-pph)}</div>
   <div class="iv-foot">
-    <div class="iv-terms"><div class="k">Terms:</div>${bk.length?bk.map(x=>`<div><b>${esc(x.bank)}</b> - ${esc(x.norek)}</div>`).join("")+`<div>${esc(issuer)}</div>`:`<div class="muted">Rekening belum diisi di Pengaturan</div>`}
+    <div class="iv-terms"><div class="k">Terms:</div>${bk.length?(bk.every(x=>(x.an||issuer)===(bk[0].an||issuer))?bk.map(x=>`<div><b>${esc(x.bank)}</b> - ${esc(x.norek)}</div>`).join("")+`<div>${esc(issuer)}</div>`:bk.map(x=>`<div><b>${esc(x.bank)}</b> - ${esc(x.norek)} <span style="color:#555b66">a.n. ${esc(x.an||issuer)}</span></div>`).join("")):`<div class="muted">Rekening belum diisi di Pengaturan</div>`}
       ${p.keterangan?`<div class="k" style="margin-top:14px">Notes:</div><div>${br(p.keterangan)}</div>`:""}</div>
     ${b.sign?`<div class="iv-sign"><div class="sp"></div><b>${esc(b.sign)}</b><div>${esc(b.signTitle||issuer)}</div></div>`:""}
   </div>
@@ -2279,21 +2293,22 @@ function invOptRec(){const p=items.find(x=>x.id===invId);if(!p)return null;retur
 function invOptFill(t){
   const rec=invOptRec()||t,all=allRekening(),cur=rekOf(rec),L=logoOf(rec),b=invBrandFor(brandOf(rec));
   const brand=rec.invBrand||b,def=banksOf(invProfile(brand));
-  let o=`<option value="">Otomatis · rekening ${esc(brand)}${def[0]?" ("+esc(def[0].bank)+" a.n. "+esc(def[0].an||"–")+")":""}</option>`;
-  if(cur.length>1)o+=`<option value="__keep">${cur.length} rekening (pilihan di form)</option>`;
-  o+=all.map(x=>`<option value="${esc(x.key)}">${esc(x.bank)} ${esc(x.norek)} · a.n. ${esc(x.an||"–")}</option>`).join("");
-  const rs=$("#invRekSel");rs.innerHTML=o;rs.value=cur.length>1?"__keep":cur.length===1?cur[0]:"";if(rs.value===""&&cur.length===1)rs.value="";
+  const sel=all.filter(x=>cur.includes(x.key));
+  $("#invRekSum").textContent=sel.length?sel.map(x=>x.bank+" "+x.norek).join(", ")+" · a.n. "+(sel[0].an||"–"):`Otomatis · rekening ${brand}${def.length?" ("+def.map(x=>x.bank).join(", ")+")":""}`;
+  $("#invRekList").innerHTML=all.length?all.map(x=>`<label class="rk"><input type="checkbox" value="${esc(x.key)}"${cur.includes(x.key)?" checked":""}><span><b>${esc(x.bank)} ${esc(x.norek)}</b><small>a.n. ${esc(x.an||"–")}${x.brand?" · "+esc(x.brand):""}</small></span></label>`).join("")+`<button type="button" class="btn sm" id="invRekAuto">Pakai otomatis (rekening brand)</button><p class="hint" style="margin:6px 0 0">Nama penerbit invoice = atas nama rekening pertama yang dicentang.</p>`:`<p class="hint" style="margin:0">Belum ada rekening. Isi dulu di Pengaturan → Profil brand invoice.</p>`;
   const ls=$("#invLogoSel");
   ls.innerHTML=`<option value="">Otomatis · logo ${esc(brand)}</option>`+INV_BRANDS.map(n=>{const has=!!invProfile(n).logo;return `<option value="${esc(n)}"${has?"":" disabled"}>Logo ${esc(n)}${has?"":" (belum diupload)"}</option>`}).join("")+`<option value="__none">Tanpa logo (tulisan nama brand)</option>`;
   ls.value=L;
 }
 async function invOptSave(){
   const rec=invOptRec();if(!rec)return;
-  const rv=$("#invRekSel").value,keys=rv==="__keep"?rekOf(rec):rv?[rv]:[];
+  const keys=[...document.querySelectorAll('#invRekList input[type="checkbox"]:checked')].map(c=>c.value);
   const np=Object.assign({},rec,{invRek:rekWith(keys,$("#invLogoSel").value),updated:TODAY});delete np.status;
   await persist(np);refreshInvoice();toast("Pilihan invoice disimpan");
 }
-$("#invRekSel").addEventListener("change",invOptSave);$("#invLogoSel").addEventListener("change",invOptSave);
+document.addEventListener("click",e=>{const d=$("#invRekBox");if(d&&d.open&&!e.target.closest("#invRekBox"))d.open=false});
+$("#invRekList").addEventListener("change",e=>{if(e.target.matches('input[type="checkbox"]'))invOptSave()});
+$("#invRekList").addEventListener("click",e=>{if(e.target.closest("#invRekAuto")){document.querySelectorAll('#invRekList input[type="checkbox"]').forEach(c=>c.checked=false);invOptSave()}});$("#invLogoSel").addEventListener("change",invOptSave);
 function openInvoice(id,mode){const p=items.find(x=>x.id===id);if(!p)return;invId=id;invMode=mode||"inv";if(!$("#invDlg").open)$("#invDlg").showModal();paintInv(p);requestAnimationFrame(fitInv);loadPdfLib().catch(()=>{})}
 function refreshInvoice(){if(!invId||!$("#invDlg").open)return;const p=items.find(x=>x.id===invId);if(p)paintInv(p);else $("#invDlg").close()}
 window.addEventListener("resize",fitInv);
