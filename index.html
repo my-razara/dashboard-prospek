@@ -1528,7 +1528,8 @@ function applySettings(){
 $("#fLayanan").innerHTML=`<option value="">Semua layanan</option>`+[["Pendirian","Pendirian"],["Perubahan","Perubahan"],["Lainnya","Layanan lain"]].map(([k,l])=>`<optgroup label="${l}">${KAT[k].map(x=>`<option value="${esc(x)}">${esc(k==="Lainnya"?x:x.replace(k+" ",""))}</option>`).join("")}</optgroup>`).join("");
 opts($("#fStatus"),ALL,"Semua status");
 $("#today").textContent=new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-$("#statusChips").innerHTML=[["Prospek",PROS],["Proses pengerjaan",PROC],["Deal",RES]].map(([g,a])=>`<div class="chips-group"><div class="g">${g}</div><div class="chips">${a.map(s=>`<label class="chip"><input type="checkbox" name="stat" value="${esc(s)}"><span>${esc(s)}</span></label>`).join("")}</div></div>`).join("");
+const NO_GO=["Lose","Spam","Delete"];
+$("#statusChips").innerHTML=[["Prospek",PROS.filter(x=>!NO_GO.includes(x))],["Proses pengerjaan",PROC],["Deal",RES.filter(x=>!NO_GO.includes(x))],["Tidak lanjut",NO_GO]].map(([g,a])=>`<div class="chips-group"><div class="g">${g}</div><div class="chips">${a.map(s=>`<label class="chip"><input type="checkbox" name="stat" value="${esc(s)}"><span>${esc(s)}</span></label>`).join("")}</div></div>`).join("");
 document.querySelectorAll('#statusChips input[name="stat"]').forEach(c=>{if(WEEKS.includes(c.value)){c.disabled=true;c.parentElement.hidden=true}});
 (()=>{const g=document.querySelector("#statusChips .chips-group .g");if(g)g.innerHTML='Prospek <span class="hint">· minggu (W) diatur lewat kolom Minggu ke</span>'})();
 const BLN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
