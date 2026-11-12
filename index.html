@@ -322,6 +322,8 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 #qNote[hidden]+#qToggle{margin-left:auto}
 .tugas .card{margin-bottom:16px}
 .tg-sum{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.card h3 #groupSeg{flex-wrap:wrap;max-width:100%}
+.hb-note{font-size:12px;color:var(--ink-3);margin-top:6px}
 .tgs.lq b{color:var(--accent-ink)}
 #lqSec[hidden]{display:none}
 #repRange[hidden]{display:none!important}
@@ -834,6 +836,7 @@ dialog .mb{overflow-x:hidden}
           <button type="button" data-g="brand">Brand</button>
           <button type="button" data-g="pic">PIC</button>
           <button type="button" data-g="layanan">Layanan</button>
+          <button type="button" data-g="paket">Paket</button>
           <button type="button" data-g="kota">Kab/kota</button>
         </span>
       </h3>
@@ -1703,9 +1706,15 @@ function render(){
   $("#tgSum").innerHTML=[["Inbox",ib.length,"ib"],["Follow-up",due.length,"due"],["Waiting DP",dpWait.length,"wdp"],["Tagihan telat",overdue.length,"bad"],["Lead belum dinilai",lqP.length,"lq"]].map(([l,n,c])=>`<div class="tgs ${c}${n?"":" zero"}"><b class="num">${n}</b><span>${l}</span></div>`).join("");
 
   // sebaran
-  const g={};B.forEach(p=>{const k=groupBy==="brand"?brandOf(p):(p[groupBy]||"–");g[k]=g[k]||{n:0,c:0,l:0};g[k].n++;if(isClient(p))g[k].c++;if(phase(p)==="lose")g[k].l++});
+  // paket: kode paket + jenisnya (PT / CV / Virtual Office / layanan lain); data tanpa paket tidak dihitung
+  const pkFam=pk=>PAKET_PT.includes(pk)?"PT":PAKET_CV.includes(pk)?"CV":PAKET_VO.includes(pk)?"VO":"";
+  let noPk=0;
+  const g={};B.forEach(p=>{let k;
+    if(groupBy==="paket"){const pk=String(PAKET_ALIAS[p.paket]||p.paket||"").trim();if(!pk||p.layanan==="Spam"){noPk++;return}k=pkFam(pk)?pk+" · "+pkFam(pk):pk}
+    else k=groupBy==="brand"?brandOf(p):(p[groupBy]||"–");
+    g[k]=g[k]||{n:0,c:0,l:0};g[k].n++;if(isClient(p))g[k].c++;if(phase(p)==="lose")g[k].l++});
   const rows=Object.entries(g).sort((a,b)=>b[1].n-a[1].n),mx=Math.max(1,...rows.map(r=>r[1].n));
-  $("#hbars").innerHTML=rows.length?rows.map(([k,v])=>`<div class="hb"><span class="k" title="${esc(k)}">${esc(k)}</span><div class="t"><i style="width:${v.n/mx*100}%"></i><i class="d" style="width:${v.c/mx*100}%"></i></div><span class="r num">${v.n} · ${v.c+v.l?Math.round(v.c/(v.c+v.l)*100)+"%":"–"}</span></div>`).join(""):`<div class="empty">Data muncul setelah ada prospek.</div>`;
+  $("#hbars").innerHTML=rows.length?rows.map(([k,v])=>`<div class="hb"><span class="k" title="${esc(k)}">${esc(k)}</span><div class="t"><i style="width:${v.n/mx*100}%"></i><i class="d" style="width:${v.c/mx*100}%"></i></div><span class="r num">${v.n} · ${v.c+v.l?Math.round(v.c/(v.c+v.l)*100)+"%":"–"}</span></div>`).join("")+(groupBy==="paket"&&noPk?`<div class="hb-note">${noPk} data tanpa paket (mis. NIB, NPWP, Spam) tidak ditampilkan.</div>`:""):`<div class="empty">${groupBy==="paket"&&noPk?"Belum ada data yang memakai paket.":"Data muncul setelah ada prospek."}</div>`;
 
   // tabs
   const tc={semua:B.length,prospek:pros.length,proses:proc.length,selesai:B.filter(p=>phase(p)==="selesai").length,tutup:B.filter(p=>["lose","spam","delete"].includes(phase(p))).length};
