@@ -325,6 +325,7 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .tgs.lq b{color:var(--accent-ink)}
 #lqSec[hidden]{display:none}
 #repRange[hidden]{display:none!important}
+#repDlg .repHtml[hidden]{display:none!important}
 #lqSec input[name="alasanQ"],#lqText{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--ink);box-sizing:border-box}
 .lq-seg{display:flex;gap:6px;flex-wrap:wrap}
 .lq-seg button{flex:1 1 auto;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 12px;font-weight:600;font-size:13px;color:var(--ink-2);cursor:pointer}
@@ -1091,12 +1092,13 @@ dialog .mb{overflow-x:hidden}
   <form id="repFrm" novalidate>
     <div class="mh"><h2 id="repTtl">Download laporan</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
     <div class="mb"><div class="form" style="grid-template-columns:1fr 1fr">
+      <label class="full">Format<select id="repFmt"><option value="html">Laporan kinerja (HTML, siap cetak / PDF)</option><option value="xlsx">Data Excel (.xlsx)</option></select></label>
       <label class="full">PIC<select id="repPic"></select></label>
-      <label class="full">Periode<select id="repKind"><option value="month">Bulan ini</option><option value="lastmonth">Bulan lalu</option><option value="week">Minggu ini</option><option value="30">30 hari terakhir</option><option value="custom">Pilih tanggal…</option></select></label>
+      <label class="full">Periode<select id="repKind"><option value="month">Bulan ini</option><option value="lastmonth">Bulan lalu</option><option value="week">Minggu ini</option><option value="30">30 hari terakhir</option><option value="custom">Pilih tanggal…</option><option value="all" id="repAll" hidden>Semua data</option></select></label>
       <div class="full" id="repRange" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Dari<input type="date" id="repFrom"></label><label>Sampai<input type="date" id="repTo"></label></div>
       <p class="hint full" id="repInfo" style="margin:0"></p>
-      <label class="full">Kendala <span class="hint">(opsional, ikut tercetak)</span><textarea id="repK" rows="3" placeholder="Mis. beberapa lead PMA masih menunggu partner WNA"></textarea></label>
-      <label class="full">Rencana periode depan <span class="hint">(opsional)</span><textarea id="repR" rows="3" placeholder="Mis. fokus menagih tagihan yang telat, dorong prospek Waiting DP"></textarea></label>
+      <label class="full repHtml">Kendala <span class="hint">(opsional, ikut tercetak)</span><textarea id="repK" rows="3" placeholder="Mis. beberapa lead PMA masih menunggu partner WNA"></textarea></label>
+      <label class="full repHtml">Rencana periode depan <span class="hint">(opsional)</span><textarea id="repR" rows="3" placeholder="Mis. fokus menagih tagihan yang telat, dorong prospek Waiting DP"></textarea></label>
       <div class="err full" id="repErr"></div>
     </div></div>
     <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn primary" type="submit">Download</button></div></div>
@@ -2486,6 +2488,7 @@ function rpPeriod(kind,f0,t0){
   else if(kind==="month"){f=t.slice(0,7)+"-01";to=ml(y,m)}
   else if(kind==="lastmonth"){const d=new Date(y,m-2,1);f=iso(d);to=ml(d.getFullYear(),d.getMonth()+1)}
   else if(kind==="30"){f=rpAdd(t,-29);to=t}
+  else if(kind==="all"){const ds=items.map(p=>String(p.created||"").slice(0,10)).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();f=ds[0]||t;to=ds.length&&ds[ds.length-1]>t?ds[ds.length-1]:t}
   else{f=f0;to=t0}
   if(!f||!to||f>to)return null;
   if(/-01$/.test(f)&&to===ml(+f.slice(0,4),+f.slice(5,7))){const d=new Date(+f.slice(0,4),+f.slice(5,7)-2,1);pf=iso(d);pt=ml(d.getFullYear(),d.getMonth()+1)}
@@ -2663,24 +2666,81 @@ function rpBuild(pic,R,notes){
 }
 // dialog
 function openReport(){
-  const a=isAdmin(),sel=$("#repPic");
+  const a=isAdmin(),sel=$("#repPic");repFmt();
   const pics=[...new Set((settings.pics||[]).concat(items.map(p=>p.pic)).filter(Boolean))].filter(n=>items.some(p=>p.pic===n));
-  sel.innerHTML=a?`<option value="__all">Semua PIC (ringkasan tim + per PIC)</option>`+pics.map(n=>`<option>${esc(n)}</option>`).join(""):`<option>${esc(user.name)}</option>`;
+  sel.innerHTML=a?`<option value="__all">Semua PIC</option>`+pics.map(n=>`<option>${esc(n)}</option>`).join(""):`<option>${esc(user.name)}</option>`;
   sel.disabled=!a;$("#repErr").textContent="";repKind();$("#repDlg").showModal();
 }
-function repKind(){const c=$("#repKind").value==="custom";$("#repRange").hidden=!c;if(c&&!$("#repFrom").value){$("#repFrom").value=TODAY.slice(0,7)+"-01";$("#repTo").value=TODAY}
+function repFmt(){const x=$("#repFmt").value==="xlsx";$("#repAll").hidden=!x;$("#repAll").disabled=!x;if(!x&&$("#repKind").value==="all")$("#repKind").value="month";document.querySelectorAll("#repDlg .repHtml").forEach(el=>el.hidden=x);repKind()}
+$("#repFmt").addEventListener("change",repFmt);
+function repKind(){if($("#repFmt").value==="xlsx"){const c=$("#repKind").value==="custom";$("#repRange").hidden=!c;if(c&&!$("#repFrom").value){$("#repFrom").value=TODAY.slice(0,7)+"-01";$("#repTo").value=TODAY}
+    const R=rpPeriod($("#repKind").value,$("#repFrom").value,$("#repTo").value);$("#repInfo").textContent=R?($("#repKind").value==="all"?"Semua data":`Data dengan tanggal masuk ${rpRangeLabel(R.f,R.t)}`)+", cuma data milik PIC yang dipilih.":"Pilih tanggal mulai dan selesai.";return}
+  const c=$("#repKind").value==="custom";$("#repRange").hidden=!c;if(c&&!$("#repFrom").value){$("#repFrom").value=TODAY.slice(0,7)+"-01";$("#repTo").value=TODAY}
   const R=rpPeriod($("#repKind").value,$("#repFrom").value,$("#repTo").value);$("#repInfo").textContent=R?`Periode ${rpRangeLabel(R.f,R.t)}, dibanding ${rpRangeLabel(R.pf,R.pt)}.`:"Pilih tanggal mulai dan selesai."}
 ["#repKind","#repFrom","#repTo"].forEach(s=>$(s).addEventListener("change",repKind));
 $("#repBtn").onclick=openReport;
-$("#repFrm").addEventListener("submit",e=>{
+$("#repFrm").addEventListener("submit",async e=>{
   e.preventDefault();const R=rpPeriod($("#repKind").value,$("#repFrom").value,$("#repTo").value);
   if(!R){$("#repErr").textContent="Tanggal belum benar.";return}
   const pic=isAdmin()?$("#repPic").value:user.name;
+  if($("#repFmt").value==="xlsx"){
+    const btn=$('#repFrm [type="submit"]');btn.disabled=true;btn.textContent="Menyiapkan Excel…";
+    try{await xlsxDownload(pic,R,$("#repKind").value==="all");$("#repDlg").close();toast("File Excel diunduh")}
+    catch(err){$("#repErr").textContent=navigator.onLine?"Gagal membuat file Excel. Coba lagi.":"Butuh internet sekali untuk fitur Excel."}
+    finally{btn.disabled=false;btn.textContent="Download"}
+    return;
+  }
   const r=rpBuild(pic,R,{k:$("#repK").value.trim(),r:$("#repR").value.trim()});
   const blob=new Blob([r.html],{type:"text/html"}),u=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=u;a.download=r.name.replace(/[\\/:*?"<>|]+/g,"-")+".html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
   $("#repDlg").close();toast("Laporan diunduh. Buka file-nya, lalu Cetak → Simpan sebagai PDF kalau perlu.");
 });
+
+// ---------- Download data Excel (hanya data PIC yang dipilih) ----------
+let xlsxLib=null;
+function loadXlsx(){
+  if(window.XLSX)return Promise.resolve();if(xlsxLib)return xlsxLib;
+  xlsxLib=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";sc.onload=()=>res();sc.onerror=()=>{xlsxLib=null;sc.remove();rej(new Error("XLSXLIB"))};document.head.appendChild(sc)});
+  return xlsxLib;
+}
+const xDate=s=>{s=String(s||"").slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(s)?new Date(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)):""};
+const xStatus=p=>tags(p).filter(t=>!WEEKS.includes(t)).join(", ");
+const xTahap=p=>{const ph=phase(p);if(ph==="delete")return "Delete";if(ph==="spam")return "Spam";if(ph==="lose")return "Lose";if(ph==="selesai")return "Serah Terima";const c=curStep(p);return c>=0?PROC[c]:"Prospek"};
+function xRows(list){
+  const head=["No","Tanggal Masuk","PIC","Sumber","Brand","Nama","Perusahaan","WhatsApp","Layanan","Paket","Status","Tahap","Kualitas Lead","Alasan Kualitas","Price Deal","Diskon","PPh","Nominal DP","Tanggal DP","Bank DP","Nominal Pelunasan","Tanggal Pelunasan","Bank Pelunasan","Sisa Tagihan","No Invoice","Jatuh Tempo","Grup","Catatan","Keterangan"];
+  const rows=list.slice().sort((a,b)=>String(a.created).localeCompare(String(b.created))).map((p,i)=>{const m=money(p);return [i+1,xDate(p.created),p.pic||"",p.sumber||"",brandOf(p),p.nama||"",p.perusahaan||"",p.wa||"",p.layanan||"",p.paket||"",xStatus(p),xTahap(p),p.kualitas||"",p.alasanQ||"",
+    m.gross?m.net:"",N(p.diskon)||"",N(p.pph)||"",N(p.dp)||"",xDate(p.tglDp),p.bankDp||"",N(p.lunas)||"",xDate(p.tglLunas),p.bankLunas||"",m.gross?Math.max(0,m.sisa):"",p.invNo||"",xDate(p.invDue),p.grup&&groupOf(p).length>1?"Grup "+groupOf(p).length+" PT":"",p.catatan||"",p.keterangan||""]});
+  return {head,rows};
+}
+function xSheet(aoa,widths,money,dates){
+  const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true});
+  const r=XLSX.utils.decode_range(ws["!ref"]);
+  for(let R=1;R<=r.e.r;R++){money.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==="n")c.z="#,##0"});dates.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==="d")c.z="dd/mm/yyyy"})}
+  ws["!cols"]=widths.map(w=>({wch:w}));ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r.e.r,c:r.e.c}})};
+  return ws;
+}
+async function xlsxDownload(pic,R,all){
+  await loadXlsx();
+  const inR=p=>{const d=String(p.created||"").slice(0,10);return all||(d>=R.f&&d<=R.t)};
+  const mine=pic==="__all"?items:items.filter(p=>p.pic===pic);   // PIC hanya melihat datanya sendiri
+  const list=mine.filter(inR);
+  const wb=XLSX.utils.book_new();
+  const {head,rows}=xRows(list);
+  XLSX.utils.book_append_sheet(wb,xSheet([head].concat(rows),[5,12,10,12,10,22,26,15,26,8,26,16,15,24,14,12,12,13,12,24,15,12,24,14,18,12,11,30,30],[14,15,16,17,20,23],[1,18,21,25]),"Data");
+  // ringkasan periode (angka sama dengan laporan kinerja)
+  const per=all?{f:R.f,t:R.t}:R,sum=[["Ringkasan "+(pic==="__all"?"semua PIC":pic)],["Periode",all?"Semua data":rpRangeLabel(per.f,per.t)],["Dibuat",new Date().toLocaleString("id-ID")],[],
+    ["PIC","Lead masuk","Closing","Closing rate","Omzet","Uang masuk","Piutang","Waiting DP (belum bayar)","Tagihan lewat jatuh tempo"]];
+  const names=pic==="__all"?[...new Set(mine.map(p=>p.pic).filter(Boolean))].sort():[pic];
+  const line=(n,L)=>{const c=rpMetrics(L,per.f,per.t);return [n,c.leads,c.closing,c.leads?String(Math.round(c.closing/c.leads*1000)/10).replace(".",",")+"%":"–",c.omzet,c.uang,c.piutang,c.wait.length,c.overdue.n]};
+  names.forEach(n=>sum.push(line(n,mine.filter(p=>p.pic===n))));
+  if(names.length>1)sum.push(line("Total",mine));
+  const ws2=XLSX.utils.aoa_to_sheet(sum);
+  for(let Rw=5;Rw<sum.length;Rw++)[4,5,6].forEach(C=>{const c=ws2[XLSX.utils.encode_cell({r:Rw,c:C})];if(c&&c.t==="n")c.z="#,##0"});
+  ws2["!cols"]=[18,12,10,12,16,16,16,22,24].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws2,"Ringkasan");
+  const nm=`Data ${pic==="__all"?"Semua PIC":pic} - ${all?"semua data":rpRangeLabel(R.f,R.t).replace(/ – /g,"-")}`.replace(/[\\/:*?"<>|]+/g,"-");
+  XLSX.writeFile(wb,nm+".xlsx");
+}
 
 // ---------- mode siang / malam ----------
 const darkMQ=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
