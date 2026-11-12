@@ -323,6 +323,8 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .tugas .card{margin-bottom:16px}
 .tg-sum{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
 .card h3 #groupSeg{flex-wrap:wrap;max-width:100%}
+.pb-pic{display:inline-flex;align-items:center;gap:8px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line)}
+@media (max-width:767px){.pb-pic{margin-left:0;padding-left:0;border-left:0;flex:1 1 100%}.pb-pic select{flex:1}}
 .hb-note{font-size:12px;color:var(--ink-3);margin-top:6px}
 .tgs.lq b{color:var(--accent-ink)}
 #lqSec[hidden]{display:none}
@@ -793,6 +795,7 @@ dialog .mb{overflow-x:hidden}
     <select id="fWeek" aria-label="Minggu" hidden><option value="">Semua minggu</option><option>W1</option><option>W2</option><option>W3</option><option>W4</option><option>W5</option><option>W6</option></select>
     <select id="fYear" aria-label="Tahun" hidden></select>
     <span class="pb-range" id="fRange" hidden><input type="date" id="fFrom" aria-label="Dari tanggal"><span class="pb-dash">s/d</span><input type="date" id="fTo" aria-label="Sampai tanggal"></span>
+    <span class="pb-pic" id="pbPic"><span class="pb-l"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>PIC</span><select id="fPic" aria-label="Filter PIC"></select></span>
     <span class="pb-sum" id="pbSum"></span>
   </section>
 
@@ -854,7 +857,6 @@ dialog .mb{overflow-x:hidden}
       <div class="fhead mobile-only"><b>Filter</b><button class="btn sm primary" type="button" id="fDone">Selesai</button></div>
       <select id="fBrand" aria-label="Filter brand"></select>
       <select id="fSumber" aria-label="Filter sumber"></select>
-      <select id="fPic" aria-label="Filter PIC"></select>
       <select id="fLayanan" aria-label="Filter layanan"></select>
       <select id="fStatus" aria-label="Filter status"></select>
       <button class="btn mobile-only" type="button" id="fReset2">Reset semua filter</button>
@@ -1410,7 +1412,7 @@ function applyRole(){
   if(!ls.get("pm_view",null))setView(a?"home":"tugas");
   $("#setBtn").style.display=a?"":"none";
   $("#sheetBtn").style.display=a&&user.sheetUrl?"":"none";if(a&&user.sheetUrl)$("#sheetBtn").href=user.sheetUrl;
-  $("#fPic").style.display=a?"":"none";if(!a)$("#fPic").value="";
+  $("#pbPic").style.display=a?"":"none";if(!a)$("#fPic").value="";
   const gp=document.querySelector('#groupSeg [data-g="pic"]');gp.style.display=a?"":"none";
   if(!a&&groupBy==="pic"){groupBy="sumber";document.querySelectorAll("#groupSeg button").forEach(b=>b.classList.toggle("on",b.dataset.g==="sumber"))}
   $("#frm").elements.pic.closest("label").style.display=a?"":"none";
@@ -1780,7 +1782,7 @@ $("#pgSize").addEventListener("change",()=>{ls.set("pm_pgsize",$("#pgSize").valu
 (()=>{const v=ls.get("pm_pgsize","10");if(["10","20","50","100"].includes(String(v)))$("#pgSize").value=String(v)})();
 window.addEventListener("resize",()=>goPage(pgIdx,false));
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{try{fitPagesHeight()}catch(e){}});
-$("#resetF").onclick=()=>{$("#q").value="";["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].forEach(s=>$(s).value="");stepFilter=null;labelFilter="";render()};
+$("#resetF").onclick=()=>{$("#q").value="";["#fBrand","#fSumber","#fLayanan","#fStatus"].forEach(s=>$(s).value="");stepFilter=null;labelFilter="";render()};
 $("#clearStep").onclick=()=>{stepFilter=null;render()};
 let busy=new Set();
 document.addEventListener("click",async e=>{
@@ -2853,7 +2855,7 @@ const VIEW_T={tugas:"Tugas hari ini",home:"Ringkasan",alur:"Alur pengerjaan",lis
 function setView(v){if(!VIEW_T[v])v="home";setTimeout(()=>{try{fitPagesHeight()}catch(e){}},30);document.body.dataset.view=v;$("#vTitle").textContent=VIEW_T[v];document.querySelectorAll(".bnav [data-view],.side [data-view]").forEach(b=>{b.classList.toggle("on",b.dataset.view===v);b.setAttribute("aria-current",b.dataset.view===v?"page":"false")});ls.set("pm_view",v);try{window.scrollTo(0,0)}catch(e){}}
 setView(ls.get("pm_view","tugas"));
 $("#fab").onclick=()=>openForm();
-function updFilterCount(){const n=["#fBrand","#fSumber","#fPic","#fLayanan","#fStatus"].filter(x=>$(x).value).length;$("#fCount").textContent=n||""}
+function updFilterCount(){const n=["#fBrand","#fSumber","#fLayanan","#fStatus"].filter(x=>$(x).value).length;$("#fCount").textContent=n||""}
 const openF=o=>document.body.classList.toggle("fopen",o);
 $("#fBtn").onclick=()=>openF(true);$("#fDone").onclick=()=>openF(false);$("#fback").onclick=()=>openF(false);
 $("#fReset2").onclick=()=>{$("#resetF").click();openF(false)};
