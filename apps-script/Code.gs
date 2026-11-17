@@ -179,6 +179,7 @@ function getAll(token) {
 // Menyimpan banyak perubahan sekaligus (antrean dari mode offline) dalam satu kunci
 function batch(token, ops) {
   const u = auth_(token);
+  if (u.role === 'atasan') throw new Error('FORBIDDEN');
   if (!Array.isArray(ops)) throw new Error('Data tidak valid');
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -190,6 +191,9 @@ function batch(token, ops) {
     let waSet = null;
     const adsDates = {};
     const vendMonths = {};
+    let salesDirty = false;
+    const DP_I = FIELDS.findIndex(f => f[0] === 'dp'), LN_I = FIELDS.findIndex(f => f[0] === 'lunas');
+    const paid_ = (dp, ln) => (Number(dp) || 0) > 0 || (Number(ln) || 0) > 0;
     const adsMark = (sumber, created) => {
       const sb = String(sumber || '').trim(), d = adsIso_(created, tz);
       if (ADS.map[sb] && d) adsDates[d] = 1;
@@ -203,7 +207,7 @@ function batch(token, ops) {
         const hit = findRow_(sh, id);
         if (hit && u.role !== 'admin' && norm_(sh.getRange(hit, PIC_COL).getValue()) !== norm_(u.name)) throw new Error('FORBIDDEN');
         if (op.op === 'del') {
-          if (hit) { const old = sh.getRange(hit, 1, 1, FIELDS.length).getValues()[0]; adsMark(old[SB_I], old[CR_I]); sh.deleteRow(hit); }
+          if (hit) { const old = sh.getRange(hit, 1, 1, FIELDS.length).getValues()[0]; adsMark(old[SB_I], old[CR_I]); if (paid_(old[DP_I], old[LN_I])) salesDirty = true; sh.deleteRow(hit); }
           return { id: id, ok: true };
         }
         const o = op.rec || {};
@@ -213,6 +217,7 @@ function batch(token, ops) {
         const ex = hit ? sh.getRange(hit, 1, 1, FIELDS.length).getValues()[0] : null;
         if (ex) adsMark(ex[SB_I], ex[CR_I]);
         adsMark(o.sumber, o.created);
+        if (paid_(o.dp, o.lunas) || (ex && paid_(ex[DP_I], ex[LN_I])) || (Array.isArray(o.statuses) && o.statuses.indexOf('Lunas') >= 0)) salesDirty = true;
         if (!String(o.invNo || '').trim()) {
           const old = ex ? String(ex[INVNO_COL - 1] || '').trim() : '';
           // nomor invoice hanya diterbitkan jika status sudah Waiting DP atau tahap setelahnya
@@ -242,6 +247,8 @@ function batch(token, ops) {
     if (Object.keys(adsDates).length) { try { adsWrite_(Object.keys(adsDates)); } catch (e) { adsErr_(e); } }
     // laporan kualitas leads ke spreadsheet vendor (Vorent / Izinin)
     if (Object.keys(vendMonths).length) vendorSync_(Object.keys(vendMonths));
+    // laporan penjualan (sheet sales-rpt) ikut diperbarui tiap ada data deal yang berubah
+    if (salesDirty) salesSafe_(ss);
     return { results: results, prev: v.prev, ver: v.ver };
   } finally {
     lock.releaseLock();
@@ -250,6 +257,7 @@ function batch(token, ops) {
 
 function saveRecord(token, o) {
   const u = auth_(token);
+  if (u.role === 'atasan') throw new Error('FORBIDDEN');
   if (!o || !o.id || !o.nama) throw new Error('Data tidak lengkap');
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -273,6 +281,7 @@ function saveRecord(token, o) {
 
 function deleteRecord(token, id) {
   const u = auth_(token);
+  if (u.role === 'atasan') throw new Error('FORBIDDEN');
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -353,12 +362,13 @@ function cleanupSessions_(props) {
 
 function payload_(ss, u) {
   let items = readAll_(ss);
-  if (u.role !== 'admin') items = items.filter(o => norm_(o.pic) === norm_(u.name));
+  const all = u.role === 'admin' || u.role === 'atasan';
+  if (!all) items = items.filter(o => norm_(o.pic) === norm_(u.name));
   return {
-    user: { name: u.name, role: u.role, sheetUrl: u.role === 'admin' ? ss.getUrl() : '' },
+    user: { name: u.name, role: u.role, sheetUrl: u.role === 'admin' ? ss.getUrl() : '', salesUrl: all ? salesUrl_() : '' },
     items: items,
     settings: readSettings_(ss),
-    budget: u.role === 'admin' ? readBudget_(ss) : [],
+    budget: all ? readBudget_(ss) : [],
     ver: getVersion()
   };
 }
@@ -443,7 +453,7 @@ function readUsers_(ss) {
     .map(r => ({
       name: String(r[0]).trim(),
       pin: String(r[1]).trim(),
-      role: norm_(r[2]) === 'admin' ? 'admin' : 'pic'
+      role: norm_(r[2]) === 'admin' ? 'admin' : (norm_(r[2]) === 'atasan' ? 'atasan' : 'pic')
     }));
 }
 
@@ -481,7 +491,7 @@ function ensure_(ss) {
     us = ss.insertSheet(SHEET_USER);
     const used = {};
     const pin = () => { let p; do { p = String(Math.floor(100000 + Math.random() * 900000)); } while (used[p]); used[p] = 1; return p; };
-    const rows = [['Nama', 'PIN', 'Peran (admin / pic)']]
+    const rows = [['Nama', 'PIN', 'Peran (admin / atasan / pic)']]
       .concat([['Razan', pin(), 'admin']])
       .concat(['Eko', 'Mayang', 'Deny', 'Yona'].map(n => [n, pin(), 'pic']));
     us.getRange(1, 1, rows.length, 3).setNumberFormat('@').setValues(rows);
@@ -832,6 +842,7 @@ function adsNightly() {
   const tz = ss_().getSpreadsheetTimeZone(), now = new Date();
   const ms = [0, 1].map(k => Utilities.formatDate(new Date(now.getFullYear(), now.getMonth() - k, 1), tz, 'yyyy-MM'));
   vendorSync_(VENDORS.reduce((a, v) => a.concat(ms.map(m => v.sumber + '|' + m)), []));
+  salesSafe_(ss_());
 }
 
 // JALANKAN SEKALI dari editor Apps Script (pilih fungsi ini lalu klik Run) untuk:
@@ -847,6 +858,7 @@ function setupGoogleAds() {
   const res = vendorSync_(VENDORS.reduce((a, v) => a.concat(Object.keys(months).map(m => v.sumber + '|' + m)), []));
   Logger.log('Laporan vendor: ' + JSON.stringify(res));
   Logger.log('Isi celah Izinin 21-31 Okt: ' + vendorBackfillIzinin_());
+  Logger.log('Sales report: ' + salesSync_(ss_()) + ' baris di sheet ' + SALES.sheet);
 }
 
 // admin: isi ulang semua tanggal sejak 1 November dari aplikasi
@@ -864,7 +876,7 @@ function adsSync(token) {
 // admin: data chat & conversion per tanggal untuk kartu di Ringkasan
 function adsStats(token) {
   const u = auth_(token);
-  if (u.role !== 'admin') throw new Error('FORBIDDEN');
+  if (u.role !== 'admin' && u.role !== 'atasan') throw new Error('FORBIDDEN');
   const props = PropertiesService.getScriptProperties();
   const ctx = adsOpen_();
   const conv = ADS.cols.map(c => ctx.cols[c] + 1);
@@ -1173,7 +1185,7 @@ function remHtml_(pic, t, today) {
 function kirimPengingatPagi() {
   const ss = ss_(), tz = ss.getSpreadsheetTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const items = readAll_(ss), emails = remEmails_(ss), out = [];
-  readUsers_(ss).filter(u => u.role !== 'admin').forEach(u => {
+  readUsers_(ss).filter(u => u.role === 'pic').forEach(u => {
     const to = emails[norm_(u.name)];
     if (!to) { out.push(u.name + ': email belum diisi'); return; }
     const t = remTasks_(items, u.name, today);
@@ -1203,7 +1215,7 @@ function setupPengingat() {
   Logger.log('Pemicu jam 08.00 (' + ss.getSpreadsheetTimeZone() + ') terpasang. Email PIC: ' + JSON.stringify(remEmails_(ss)));
   // contoh tampilan ke pemilik script, supaya bisa dicek dulu
   const me = Session.getEffectiveUser().getEmail(), tz = ss.getSpreadsheetTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
-  const pic = readUsers_(ss).find(u => u.role !== 'admin');
+  const pic = readUsers_(ss).find(u => u.role === 'pic');
   if (me && pic) {
     const t = remTasks_(readAll_(ss), pic.name, today);
     MailApp.sendEmail({ to: me, subject: '[Contoh] Pengingat pagi untuk ' + pic.name, htmlBody: remHtml_(pic.name, t, today), name: 'Monitoring Prospek' });
@@ -1223,4 +1235,117 @@ function hapusSheetTakTerpakai() {
   Logger.log('Dihapus (' + names.length + '): ' + names.join(', '));
   Logger.log('Tersisa: ' + ss.getSheets().map(sh => sh.getName()).join(', '));
   return names;
+}
+
+/* ---------------- Laporan penjualan untuk atasan (sheet "sales-rpt" di spreadsheet Google Ads) ---------------- */
+// Isinya ditulis ulang otomatis dari database tiap ada data deal berubah (+ tiap malam jam 01.00).
+// Satu baris = satu data yang sudah bayar (ada DP atau pelunasan), urut tanggal DP.
+const SALES = {
+  sheet: 'sales-rpt',
+  head: ['No.', 'Tanggal Masuk', 'Tanggal DP', 'Iklan', 'Klien', 'Layanan', 'Packages', 'VO Partner', 'Kab/Kota', 'Branch',
+    'Status', 'Tahap', 'Month', 'MonthTxt', 'Year', 'Price Deal', 'DP', 'Pelunasan', 'Tanggal Pelunasan', 'Sisa Tagihan', 'Remarks', 'PIC'],
+  dates: [2, 3, 19], money: [16, 17, 18, 20]
+};
+
+function salesId_() {
+  return PropertiesService.getScriptProperties().getProperty('ADS_SHEET_ID') || ADS.id;
+}
+
+function salesUrl_() {
+  const gid = PropertiesService.getScriptProperties().getProperty('SALES_GID');
+  return 'https://docs.google.com/spreadsheets/d/' + salesId_() + '/edit' + (gid ? '#gid=' + gid : '');
+}
+
+function salesDate_(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : '';
+}
+
+// baris laporan dari data aplikasi (dipakai juga untuk tes)
+function salesRows_(items) {
+  const PROC_ = PROC;
+  return items
+    .filter(o => (Number(o.dp) || 0) > 0 || (Number(o.lunas) || 0) > 0)
+    .map(o => {
+      const st = Array.isArray(o.statuses) ? o.statuses : String(o.statuses || '').split(',').map(x => x.trim());
+      let c = -1;
+      PROC_.forEach((x, i) => { if (st.indexOf(x) >= 0) c = i; });
+      if (c < 0) c = 0;  // sudah bayar tapi belum dicentang tahapnya (sama seperti di aplikasi)
+      const deal = String(((Number(o.dp) || 0) > 0 ? o.tglDp : o.tglLunas) || o.tglDp || o.tglLunas || o.created || '').slice(0, 10);
+      const mo = money_(o);
+      return { k: deal + '|' + String(o.created || '') + '|' + Number(o.no || 0), o: o, deal: deal, done: st.indexOf('Serah Terima') >= 0 || !!o.selesai, tahap: c >= 0 ? PROC_[c] : '', mo: mo };
+    })
+    .sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : 0)
+    .map((x, i) => {
+      const o = x.o, m = Number(x.deal.slice(5, 7)) || 0;
+      return [i + 1, salesDate_(o.created), salesDate_(o.tglDp), o.sumber || '', o.perusahaan || o.nama || '', o.layanan || '', o.paket || '',
+        o.vo || '', o.kota || '', o.brand || '', x.done ? 'DONE' : 'Still Process', x.tahap, m || '', m ? MON_TXT[m - 1] : '',
+        Number(x.deal.slice(0, 4)) || '', x.mo.gross ? x.mo.net : (Number(o.priceDeal) || 0), Number(o.dp) || 0, Number(o.lunas) || 0,
+        salesDate_(o.tglLunas), x.mo.gross ? Math.max(0, Number(x.mo.sisa) || 0) : '', o.keterangan || '', o.pic || ''];
+    });
+}
+
+function salesSync_(ss) {
+  const rows = salesRows_(readAll_(ss));
+  const ext = SpreadsheetApp.openById(salesId_());
+  const props = PropertiesService.getScriptProperties();
+  let sh = ext.getSheetByName(SALES.sheet);
+  // pertama kali: simpan salinan isi lama sebelum ditimpa
+  if (sh && !props.getProperty('SALES_INIT')) {
+    try { sh.copyTo(ext).setName(SALES.sheet + ' (lama)'); } catch (e) {}
+  }
+  if (!sh) sh = ext.insertSheet(SALES.sheet);
+  props.setProperty('SALES_INIT', '1');
+  const nc = SALES.head.length, n = rows.length + 1;
+  const f = sh.getFilter();
+  if (f) f.remove();
+  sh.clear();
+  if (sh.getMaxColumns() < nc) sh.insertColumnsAfter(sh.getMaxColumns(), nc - sh.getMaxColumns());
+  if (sh.getMaxRows() < n + 1) sh.insertRowsAfter(sh.getMaxRows(), n + 1 - sh.getMaxRows());
+  sh.getRange(1, 1, n, nc).setValues([SALES.head].concat(rows));
+  sh.getRange(1, 1, 1, nc).setFontWeight('bold').setBackground('#14213D').setFontColor('#FFFFFF');
+  if (rows.length) {
+    SALES.dates.forEach(c => sh.getRange(2, c, rows.length, 1).setNumberFormat('dd-MMM-yy'));
+    SALES.money.forEach(c => sh.getRange(2, c, rows.length, 1).setNumberFormat('#,##0'));
+  }
+  sh.setFrozenRows(1);
+  sh.getRange(1, 1, n, nc).createFilter();
+  props.setProperty('SALES_GID', String(sh.getSheetId()));
+  props.setProperty('SALES_OK', new Date().toISOString() + ' ' + rows.length + ' baris');
+  props.deleteProperty('SALES_ERR');
+  return rows.length;
+}
+
+// gagal menulis laporan tidak boleh membatalkan simpan data
+function salesSafe_(ss) {
+  try { return salesSync_(ss); } catch (e) {
+    PropertiesService.getScriptProperties().setProperty('SALES_ERR', new Date().toISOString() + ' ' + String((e && e.message) || e));
+    return -1;
+  }
+}
+
+// JALANKAN SEKALI dari editor Apps Script (pilih fungsi ini lalu Run):
+// jadikan Heru peran "atasan" (lihat semua data, tidak bisa mengubah), lalu isi sheet sales-rpt.
+// Kalau Heru belum ada di sheet Pengguna, dibuatkan dengan PIN baru (lihat di Log eksekusi).
+function setupAtasan() {
+  const NAME = 'Heru';
+  const ss = ss_(), sh = ss.getSheetByName(SHEET_USER);
+  const last = sh.getLastRow();
+  const v = last >= 2 ? sh.getRange(2, 1, last - 1, 3).getValues() : [];
+  const used = {};
+  v.forEach(r => used[String(r[1]).trim()] = 1);
+  const newPin = () => { let p; do { p = String(Math.floor(100000 + Math.random() * 900000)); } while (used[p]); return p; };
+  const i = v.findIndex(r => norm_(r[0]) === norm_(NAME));
+  let pin;
+  if (i < 0) {
+    pin = newPin();
+    sh.getRange(last + 1, 1, 1, 3).setNumberFormat('@').setValues([[NAME, pin, 'atasan']]);
+  } else {
+    pin = String(v[i][1]).trim();
+    if (!pin) { pin = newPin(); sh.getRange(i + 2, 2).setNumberFormat('@').setValue(pin); }
+    sh.getRange(i + 2, 3).setValue('atasan');
+  }
+  if (String(sh.getRange(1, 3).getValue()).indexOf('atasan') < 0) sh.getRange(1, 3).setValue('Peran (admin / atasan / pic)');
+  Logger.log(NAME + ' sekarang peran atasan. PIN login: ' + pin);
+  Logger.log('Sales report: ' + salesSync_(ss) + ' baris ditulis ke sheet ' + SALES.sheet + ' → ' + salesUrl_());
 }
