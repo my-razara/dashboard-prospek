@@ -338,6 +338,22 @@ body:not([data-view="sebaran"]) [data-mv="sebaran"]{display:none!important}
 .qbar .hint{color:var(--accent-ink);font-weight:600}
 #qNote[hidden]+#qToggle{margin-left:auto}
 .tugas .card{margin-bottom:16px}
+.bulk-cta{display:flex;align-items:center;gap:12px;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-left:4px solid #25D366;border-radius:14px;padding:12px 14px;margin-bottom:16px}
+.bulk-cta b{display:block;font-size:15px}.bulk-cta small{color:var(--muted);font-size:12.5px}.bulk-cta .btn{white-space:nowrap}
+#bulkList .bk-sec{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 4px}
+#bulkList label{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+#bulkList label span{flex:1;min-width:0}#bulkList label small{display:block;color:var(--muted);font-size:12px}
+#bulkList label.off{opacity:.5;cursor:default}
+#bulkList .tg{font-style:normal;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:99px;background:rgba(37,211,102,.14);color:#128C4A;white-space:nowrap}
+.bulk-all{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.bulk-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9998;width:min(520px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:4px solid #25D366;box-shadow:0 10px 30px rgba(15,23,42,.22);border-radius:16px;padding:12px 14px}
+.bulk-bar[hidden]{display:none}
+.bulk-bar .bb-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.bulk-bar .bb-prog{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin-bottom:10px}.bulk-bar .bb-prog i{display:block;height:100%;background:#25D366}
+.bulk-bar .bb-who{font-size:15px;font-weight:700}.bulk-bar .bb-who small{display:block;font-weight:500;color:var(--muted);font-size:12.5px}
+.bulk-bar .bb-act{display:flex;gap:8px;margin-top:10px}.bulk-bar .bb-go{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;text-decoration:none;background:#1FAF55!important;border-color:#1FAF55!important;color:#fff!important;font-weight:700;opacity:1!important}
+body.ro #bulkCta,body.ro #bulkBar{display:none!important}
+@media (max-width:767px){.bulk-bar{bottom:calc(72px + env(safe-area-inset-bottom,0px))}.bulk-cta{flex-direction:column;align-items:stretch}}
 .tg-sum{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
 .card h3 #groupSeg{flex-wrap:wrap;max-width:100%}
 .pb-pic{display:inline-flex;align-items:center;gap:8px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line)}
@@ -840,6 +856,7 @@ dialog .mb{overflow-x:hidden}
 
   <section data-mv="tugas" class="tugas">
     <div class="tg-sum" id="tgSum"></div>
+    <div class="bulk-cta" id="bulkCta" hidden><div><b id="bulkCtaN"></b><small>Follow-up, waiting DP & tagihan telat. Pesan sudah terisi, tinggal kirim satu per satu.</small></div><button type="button" class="btn primary" id="bulkOpen">Kirim beruntun</button></div>
     <div class="card"><h3>Inbox follow-up <small id="tgIbN"></small></h3><ul class="fu" id="tgIb"></ul></div>
     <div class="card"><h3>Follow-up jatuh tempo <span><small id="tgFuN"></small> <button type="button" class="lnk" data-go="fu">Semua follow-up →</button></span></h3><ul class="fu" id="tgFu"></ul></div>
     <div class="card"><h3>Waiting DP, belum bayar <small id="tgDpN"></small></h3><ul class="fu" id="tgDp"></ul></div>
@@ -1113,6 +1130,16 @@ dialog .mb{overflow-x:hidden}
   </div>
   <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" id="waCopy">Salin</button><a class="btn primary wa-go" id="waGo" href="#" target="_blank" rel="noopener">Buka WhatsApp</a><button class="btn primary" type="button" id="waPdf" hidden>Kirim + PDF</button></div></div>
 </dialog>
+<dialog id="bulkDlg" class="paydlg" aria-labelledby="bulkTtl">
+  <div class="mh"><h2 id="bulkTtl">Kirim WhatsApp beruntun</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+  <div class="mb">
+    <p class="hint" style="margin:0 0 10px">Pilih siapa saja yang mau dikirimi. Chat WhatsApp akan dibuka satu per satu dengan pesan yang sudah terisi: kamu tinggal tekan kirim di WhatsApp, balik ke aplikasi, lalu tekan <b>Lanjut</b>. Follow-up otomatis ditandai sudah.</p>
+    <label class="bulk-all"><input type="checkbox" id="bulkAll" checked> Pilih semua</label>
+    <div id="bulkList"></div>
+  </div>
+  <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn primary" type="button" id="bulkStart">Mulai</button></div></div>
+</dialog>
+<div class="bulk-bar" id="bulkBar" hidden></div>
 <dialog id="lqDlg" class="paydlg" aria-labelledby="lqTtl">
   <form id="lqFrm" novalidate>
     <div class="mh"><h2 id="lqTtl">Nilai lead</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
@@ -1442,6 +1469,7 @@ async function sync(){
 function loadData(d){
   user=d.user;serverItems=d.items||[];settings=Object.assign({sumber:[],brands:[],pics:[],vo:[],kota:[],invBrands:[],waTpl:{}},d.settings);settings.budget=d.budget||[];localVer=d.ver||"0";
   items=applyQueue(serverItems);saveLocal();applyRole();applySettings();render();
+  try{bulkPaint()}catch(e){}
 }
 function applyRole(){
   const a=isAdmin();
@@ -1742,6 +1770,7 @@ function render(){
   const lqP=lqPending(B).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
   $("#tgLq").innerHTML=lqP.length?lqP.slice(0,30).map(p=>li(p,`<small>${esc(p.sumber)}</small><small class="co">masuk ${fmtD(p.created)}</small>`,`<button class="btn sm" type="button" data-lq="Tidak Berkualitas" data-id="${p.id}">Tidak</button><button class="btn sm primary" type="button" data-lq="Berkualitas" data-id="${p.id}">Berkualitas</button>`)).join("")+(lqP.length>30?`<li class="empty">+${lqP.length-30} lainnya</li>`:""):none("Semua lead iklan sudah dinilai.");
   [["#tgIbN",ib],["#tgFuN",due],["#tgDpN",dpWait],["#tgDueN",overdue],["#tgLqN",lqP]].forEach(([id,a])=>$(id).textContent=a.length?a.length+" data":"");
+  tgLists={fu:due,dp:dpWait,due:overdue};try{bulkCta()}catch(e){}
   const tgN=ib.length+due.length+dpWait.length+overdue.length;
   $("#tgBadge").textContent=$("#tgBadgeS").textContent=tgN?(tgN>99?"99+":tgN):"";
   $("#tgSum").innerHTML=[["Inbox",ib.length,"ib"],["Follow-up",due.length,"due"],["Waiting DP",dpWait.length,"wdp"],["Tagihan telat",overdue.length,"bad"],["Lead belum dinilai",lqP.length,"lq"]].map(([l,n,c])=>`<div class="tgs ${c}${n?"":" zero"}"><b class="num">${n}</b><span>${l}</span></div>`).join("");
@@ -3009,6 +3038,68 @@ $("#waPdf").onclick=async()=>{
   const done=await sendDocWA(p,b.dataset.mode,$("#waText").value.trim(),b,lbl);if(done)$("#waDlg").close();
 };
 $("#waCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#waText").value);toast("Pesan disalin")}catch(e){$("#waText").select();toast("Tekan lama lalu salin")}};
+// ---------- kirim WhatsApp beruntun (tugas hari ini) ----------
+// WhatsApp tidak bisa mengirim otomatis ke banyak nomor (kecuali WhatsApp Business API berbayar),
+// jadi chat dibuka satu per satu dengan pesan terisi; PIC tinggal tekan kirim lalu Lanjut.
+var tgLists={fu:[],dp:[],due:[]};
+var BULK_SEC=[["fu","Follow-up jatuh tempo"],["dp","Waiting DP, belum bayar"],["due","Tagihan lewat jatuh tempo"]];
+function bulkCands(){
+  const seen=new Set(),out=[];
+  BULK_SEC.forEach(([kind])=>(tgLists[kind]||[]).forEach(p=>{
+    const k=kind==="fu"?fuState(p).label:kind==="dp"?"INV":"TAGIH";if(!k)return;
+    const w=waLink(p.wa),key=w||("x"+p.id);
+    if(seen.has(key))return;seen.add(key);   // 1 nomor cukup 1 chat per putaran
+    out.push({id:p.id,kind,k,ok:!!w});
+  }));
+  return out;
+}
+var bulkLbl=x=>x.kind==="fu"?x.k:x.k==="INV"?docName(items.find(p=>p.id===x.id)||{}):"Tagihan";
+function bulkCta(){
+  const n=bulkCands().filter(x=>x.ok).length;
+  $("#bulkCta").hidden=n<2||isAtasan();$("#bulkCtaN").textContent=n+" chat WhatsApp siap dikirim";
+}
+var bulk=ls.get("pm_bulk",null);
+var bulkSave=()=>ls.set("pm_bulk",bulk);
+$("#bulkOpen").onclick=()=>{
+  const c=bulkCands();
+  $("#bulkList").innerHTML=BULK_SEC.map(([kind,t])=>{const a=c.filter(x=>x.kind===kind);if(!a.length)return "";
+    return `<div class="bk-sec">${t} (${a.length})</div>`+a.map(x=>{const p=items.find(q=>q.id===x.id)||{};
+      return `<label class="${x.ok?"":"off"}"><input type="checkbox" data-bk="${x.id}" data-k="${x.k}" data-kind="${x.kind}"${x.ok?" checked":" disabled"}><span>${esc(p.nama||"")}<small>${esc(p.layanan||"")}${isAdmin()?" · "+esc(p.pic||""):""}${x.ok?"":" · nomor WA kosong"}</small></span><em class="tg">${esc(bulkLbl(x))}</em></label>`}).join("")}).join("")||`<p class="hint">Tidak ada yang perlu dikirimi hari ini.</p>`;
+  $("#bulkAll").checked=true;bulkCount();$("#bulkDlg").showModal();
+};
+function bulkCount(){const n=document.querySelectorAll("#bulkList [data-bk]:checked").length;$("#bulkStart").textContent=n?`Mulai (${n} chat)`:"Mulai";$("#bulkStart").disabled=!n}
+$("#bulkList").addEventListener("change",bulkCount);
+$("#bulkAll").addEventListener("change",e=>{document.querySelectorAll("#bulkList [data-bk]:not(:disabled)").forEach(x=>x.checked=e.target.checked);bulkCount()});
+$("#bulkStart").onclick=()=>{
+  const q=[...document.querySelectorAll("#bulkList [data-bk]:checked")].map(x=>({id:x.dataset.bk,k:x.dataset.k,kind:x.dataset.kind}));
+  if(!q.length)return;bulk={q,i:0,sent:0,day:TODAY};bulkSave();$("#bulkDlg").close();bulkPaint();
+};
+function bulkStop(msg){bulk=null;ls.set("pm_bulk",null);$("#bulkBar").hidden=true;if(msg)toast(msg)}
+function bulkPaint(){
+  const bar=$("#bulkBar");
+  if(!bulk||!user||isAtasan()||bulk.day!==TODAY){if(bulk&&bulk.day!==TODAY)bulkStop();bar.hidden=true;return}
+  // lewati data yang sudah tidak ada / tidak punya nomor
+  while(bulk.i<bulk.q.length){const x=bulk.q[bulk.i],p=items.find(q=>q.id===x.id);if(p&&waLink(p.wa))break;bulk.i++}
+  const n=bulk.q.length;bar.hidden=false;
+  if(bulk.i>=n){bar.innerHTML=`<div class="bb-who">Selesai 🎉<small>${bulk.sent} chat dibuka dari ${n} yang dipilih.</small></div><div class="bb-act"><button type="button" class="btn primary" style="flex:1" data-bb="stop">Tutup</button></div>`;bulkSave();return}
+  const x=bulk.q[bulk.i],p=items.find(q=>q.id===x.id),href=waLink(p.wa)+"?text="+encodeURIComponent(waMsg(p,x.k));
+  bar.innerHTML=`<div class="bb-top"><span>Kirim beruntun · ${bulk.i+1} dari ${n}</span><button type="button" class="lnk" data-bb="stop">Berhenti</button></div>
+    <div class="bb-prog"><i style="width:${bulk.i/n*100}%"></i></div>
+    <div class="bb-who">${esc(p.nama)}<small>${esc(bulkLbl(x))} · ${esc(p.layanan||"")}${isAdmin()?" · "+esc(p.pic||""):""}</small></div>
+    <div class="bb-act"><button type="button" class="btn" data-bb="skip">Lewati</button><a class="btn bb-go" href="${esc(href)}" target="_blank" rel="noopener" data-bb="go">${bulk.sent||bulk.i?"Lanjut: ":""}Buka WA ${esc(p.nama)}</a></div>`;
+  bulkSave();
+}
+$("#bulkBar").addEventListener("click",e=>{
+  const b=e.target.closest("[data-bb]");if(!b||!bulk)return;const a=b.dataset.bb;
+  if(a==="stop"){bulkStop(bulk.i<bulk.q.length?"Kirim beruntun dihentikan":"");return}
+  const x=bulk.q[bulk.i];
+  if(a==="go"&&x){ // link dibiarkan terbuka (jangan preventDefault), lalu tandai & siapkan berikutnya
+    const p=items.find(q=>q.id===x.id);
+    if(p&&x.kind==="fu"){const s=fuState(p);if(s.label===x.k&&!s.done)try{markFu(p.id)}catch(err){}}
+    bulk.sent++;
+  }
+  bulk.i++;bulkSave();setTimeout(bulkPaint,a==="go"?400:0);
+});
 // ---------- input cepat ----------
 let quickMode=ls.get("pm_quick",true);
 function setQuick(q){quickMode=q;$("#frm").classList.toggle("quick",q&&!editingId);$("#qToggle").textContent=q?"Isi lengkap":"Mode cepat";$("#qNote").hidden=!(q&&!editingId);ls.set("pm_quick",q)}
@@ -3037,7 +3128,7 @@ document.addEventListener("keydown",e=>{const c=e.target.closest&&e.target.close
   if(sp.m){if(![...$("#fMonth").options].some(o=>o.value===sp.m))$("#fMonth").insertAdjacentHTML("afterbegin",`<option value="${sp.m}">${ymLabel(sp.m)}</option>`);$("#fMonth").value=sp.m}
   if(sp.y){if(![...$("#fYear").options].some(o=>o.value===sp.y))$("#fYear").insertAdjacentHTML("afterbegin",`<option value="${sp.y}">${sp.y}</option>`);$("#fYear").value=sp.y}
   $("#fFrom").value=sp.f||"";$("#fTo").value=sp.t||"";periodUI();if(sp.w&&!$("#fWeek").hidden)$("#fWeek").value=sp.w})();
-applySettings();updPaket();render();
+applySettings();updPaket();render();try{bulkPaint()}catch(e){}
 (function boot(){
   const cached=ls.get(K.data,null);
   if(token&&cached&&cached.user){
