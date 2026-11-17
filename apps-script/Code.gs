@@ -19,7 +19,7 @@ const PROC = ['Waiting DP', 'TTD Draft Akta', 'NPWP dan NIB', 'PKP', 'Waiting Lu
 // Urutan kolom sheet "Prospek" (kolom A, B, C, ... mengikuti urutan ini)
 const FIELDS = [
   ['no', 'No'], ['created', 'Tanggal Masuk'], ['sumber', 'Sumber'], ['perusahaan', 'Perusahaan'],
-  ['vo', 'VO Partner'], ['kota', 'Kab/Kota'], ['brand', 'Brand'], ['paket', 'Paket'], ['statuses', 'Status'],
+  ['vo', 'VO Partner'], ['kota', 'Kab/Kota'], ['brand', 'Brand'], ['paket', 'Paket'], ['paketVo', 'Paket VO'], ['statuses', 'Status'],
   ['pic', 'PIC'], ['bulanNo', 'Bulan'], ['bulanTxt', 'Bulan (Teks)'], ['tahun', 'Tahun'],
   ['priceDeal', 'Price Deal'], ['dp', 'Nominal DP'], ['lunas', 'Nominal Pelunasan'], ['keterangan', 'Keterangan'], ['grup', 'Grup'],
   ['nama', 'Nama'], ['wa', 'WhatsApp'], ['layanan', 'Layanan'], ['tahap', 'Tahap Terakhir'], ['sisa', 'Sisa Tagihan'],
@@ -1283,7 +1283,7 @@ function salesRows_(items) {
         x.done ? 'DONE' : 'Still Process', '', m || '', m ? MON_TXT[m - 1] : '', Number(x.deal.slice(0, 4)) || '',
         // Virtual Office: DP diisi sama dengan pelunasan (biasanya langsung lunas tanpa DP)
         price, vo && !(Number(o.dp) > 0) ? (Number(o.lunas) || 0) : (Number(o.dp) || 0), Number(o.lunas) || 0, '', '', '', '=SUM(Q' + r + ':S' + r + ')', '=N(N' + r + ')-N(T' + r + ')',
-        txt(o.keterangan), lc(o.pic), '', lc(o.pic), vo ? txt(o.paket) : '', vo ? price : ''];
+        txt(o.keterangan), lc(o.pic), '', lc(o.pic), vo ? txt(o.paket) : txt(o.paketVo), vo ? price : ''];
     });
 }
 

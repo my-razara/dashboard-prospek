@@ -994,6 +994,7 @@ dialog .mb{overflow-x:hidden}
             <div class="kat" id="katSeg" role="group" aria-label="Kategori layanan"><button type="button" data-kat="Pendirian">Pendirian</button><button type="button" data-kat="Perubahan">Perubahan</button><button type="button" data-kat="Lainnya">Layanan lain</button></div>
             <select name="layanan" aria-label="Layanan"></select></div>
           <label id="paketWrap"><span class="lt">Paket <span class="rq" id="paketRq" aria-hidden="true">*</span></span><select name="paket"></select><input name="paketManual" placeholder="Ketik paket" autocomplete="off"></label>
+          <label id="paketVoWrap" style="display:none"><span class="lt">Paket VO <span class="hint">(termasuk di paket ini)</span></span><select name="paketVo"><option value="">Pilih paket VO</option><option>Basic</option><option>Silver</option></select></label>
           <div class="stack qh">
             <label>VO partner<input name="vo" list="voList" placeholder="Lokasi VO" autocomplete="off"><datalist id="voList"></datalist></label>
             <label>Kab/kota<input name="kota" list="kotaList" placeholder="Kabupaten / kota" autocomplete="off"><datalist id="kotaList"></datalist></label>
@@ -1216,6 +1217,8 @@ const katOf=l=>Object.keys(KAT).find(k=>KAT[k].includes(l))||"Lainnya";
 // kode paket lama yang sudah diganti namanya
 const PAKET_ALIAS={CTL:"CVL",CTV:"CVV"};
 const PAKET_PT=["PTO","PIO","PIP","PIV","PTL","PTV"],PAKET_CV=["CTO","CIO","CIP","CIV","CVL","CVV"],PAKET_VO=["Basic","Silver"];
+// paket PT/CV yang sudah termasuk Virtual Office: semua kecuali yang berakhiran O
+const pkHasVo=pk=>{pk=PAKET_ALIAS[pk]||pk;return (PAKET_PT.includes(pk)||PAKET_CV.includes(pk))&&!/O$/.test(pk)};
 const paketFor=l=>!l||l==="Spam"?null:["Pendirian PT PMDN","Pendirian PT PMA","Pendirian PT Perorangan"].includes(l)?PAKET_PT:l==="Pendirian CV"?PAKET_CV:l==="Sewa Virtual Office"?PAKET_VO:"manual";
 const DEFAULT_SET={
   sumber:[{n:"ads-lopo",b:"Vorent"},{n:"vorepeat",b:"Vorent"},{n:"ads-gusti",b:"izinin"},{n:"repeat",b:"izinin"},{n:"ads-echo",b:"Echoffice"},{n:"corepeat",b:"Echoffice"}],
@@ -1924,7 +1927,11 @@ function updPaket(keep){const a=paketFor(F.layanan.value);$("#paketWrap").style.
   F.paket.style.display=Array.isArray(a)?"":"none";$("#paketRq").hidden=!Array.isArray(a);F.paketManual.style.display=a==="manual"?"":"none";
   if(Array.isArray(a)){opts(F.paket,a,"Pilih paket");F.paket.value=a.includes(v)?v:"";F.paketManual.value=""}
   else if(a==="manual"){F.paketManual.value=v||"";F.paket.value=""}
-  else{F.paket.value="";F.paketManual.value=""}}
+  else{F.paket.value="";F.paketManual.value=""}
+  updPaketVo()}
+function updPaketVo(){const on=Array.isArray(paketFor(F.layanan.value))&&pkHasVo(F.paket.value);$("#paketVoWrap").style.display=on?"":"none";
+  const v=F.paketVo.value;if(v&&![...F.paketVo.options].some(o=>o.value===v))F.paketVo.insertAdjacentHTML("beforeend",`<option>${esc(v)}</option>`)}
+F.paket.addEventListener("change",updPaketVo);
 F.layanan.addEventListener("change",()=>updPaket(""));
 // sumber "Other": ketik sendiri
 const isOtherSrc=()=>F.sumber.value==="__other";
@@ -1967,7 +1974,9 @@ function openForm(id){
   ["nilai","priceDeal","diskon","dp","lunas","pph","retur"].forEach(k=>setMoney(k,d[k]));
   fillBankSel(F.bankDp,d.bankDp||"");fillBankSel(F.bankLunas,d.bankLunas||"");
   F.alasanQ.value=d.alasanQ||"";F.srcTanpa.checked=d.srcChat==="Tanpa Keterangan";lqSet(d.kualitas||"");lqVis();
-  setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");updPaket(d.paket||"");updBrand();
+  setKat(d.layanan?katOf(d.layanan):"Pendirian",d.layanan||"");
+  if(d.paketVo&&![...F.paketVo.options].some(o=>o.value===d.paketVo))F.paketVo.insertAdjacentHTML("beforeend",`<option>${esc(d.paketVo)}</option>`);
+  F.paketVo.value=d.paketVo||"";updPaket(d.paket||"");updBrand();
   const s=tags(d);frm.querySelectorAll('input[name="stat"]').forEach(c=>c.checked=s.includes(c.value));
   showAutoWeek();
   $("#multiWrap").hidden=!!p;$("#multiOn").checked=false;$("#multiBox").hidden=true;F.ptList.value="";$("#ptOneWrap").classList.remove("mhide");
@@ -1997,7 +2006,7 @@ frm.addEventListener("submit",async e=>{
   const invB=v("invBrand"),brFromInv=settings.brands.find(x=>invBrandFor(x)===invB&&x)||"";
   const p=Object.assign({id:editingId||("p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     nama:v("nama"),perusahaan:v("perusahaan"),wa:v("wa"),sumber:sumberVal(),brand:src?src.b:(brFromInv||(prev&&prev.brand)||""),pic:isAdmin()?v("pic"):user.name,
-    bulan:(v("created")||TODAY).slice(0,7),minggu:weekOf(v("created")||TODAY),layanan:v("layanan"),paket:Array.isArray(paketFor(v("layanan")))?v("paket"):v("paketManual"),vo:v("vo"),kota:v("kota"),created:v("created")||TODAY,
+    bulan:(v("created")||TODAY).slice(0,7),minggu:weekOf(v("created")||TODAY),layanan:v("layanan"),paket:Array.isArray(paketFor(v("layanan")))?v("paket"):v("paketManual"),paketVo:Array.isArray(paketFor(v("layanan")))&&pkHasVo(v("paket"))?v("paketVo"):"",vo:v("vo"),kota:v("kota"),created:v("created")||TODAY,
     nilai:moneyVal("nilai"),statuses:st,kualitas:prev?prev.kualitas||"":"",alasanQ:prev?prev.alasanQ||"":"",srcChat:prev?prev.srcChat||"":"",tglDp:v("tglDp"),tglLunas:v("tglLunas"),bankDp:v("bankDp"),bankLunas:v("bankLunas"),keterangan:v("keterangan"),catatan:v("catatan"),updated:TODAY},formMoney());
   p.selesai=st.includes("Serah Terima")?((prev&&prev.selesai)||TODAY):"";
   // follow-up sepenuhnya otomatis: nilai lama dipertahankan
@@ -2891,8 +2900,8 @@ const xDate=s=>{s=String(s||"").slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(s)
 const xStatus=p=>tags(p).filter(t=>!WEEKS.includes(t)).join(", ");
 const xTahap=p=>{const ph=phase(p);if(ph==="delete")return "Delete";if(ph==="spam")return "Spam";if(ph==="lose")return "Lose";if(ph==="selesai")return "Serah Terima";const c=curStep(p);return c>=0?PROC[c]:"Prospek"};
 function xRows(list){
-  const head=["No","Tanggal Masuk","PIC","Sumber","Brand","Nama","Perusahaan","WhatsApp","Layanan","Paket","Status","Tahap","Kualitas Lead","Alasan Kualitas","Price Deal","Diskon","PPh","Nominal DP","Tanggal DP","Bank DP","Nominal Pelunasan","Tanggal Pelunasan","Bank Pelunasan","Sisa Tagihan","No Invoice","Jatuh Tempo","Grup","Catatan","Keterangan"];
-  const rows=list.slice().sort((a,b)=>String(a.created).localeCompare(String(b.created))).map((p,i)=>{const m=money(p);return [i+1,xDate(p.created),p.pic||"",p.sumber||"",brandOf(p),p.nama||"",p.perusahaan||"",p.wa||"",p.layanan||"",p.paket||"",xStatus(p),xTahap(p),p.kualitas||"",p.alasanQ||"",
+  const head=["No","Tanggal Masuk","PIC","Sumber","Brand","Nama","Perusahaan","WhatsApp","Layanan","Paket","Paket VO","Status","Tahap","Kualitas Lead","Alasan Kualitas","Price Deal","Diskon","PPh","Nominal DP","Tanggal DP","Bank DP","Nominal Pelunasan","Tanggal Pelunasan","Bank Pelunasan","Sisa Tagihan","No Invoice","Jatuh Tempo","Grup","Catatan","Keterangan"];
+  const rows=list.slice().sort((a,b)=>String(a.created).localeCompare(String(b.created))).map((p,i)=>{const m=money(p);return [i+1,xDate(p.created),p.pic||"",p.sumber||"",brandOf(p),p.nama||"",p.perusahaan||"",p.wa||"",p.layanan||"",p.paket||"",p.paketVo||"",xStatus(p),xTahap(p),p.kualitas||"",p.alasanQ||"",
     m.gross?m.net:"",N(p.diskon)||"",N(p.pph)||"",N(p.dp)||"",xDate(p.tglDp),p.bankDp||"",N(p.lunas)||"",xDate(p.tglLunas),p.bankLunas||"",m.gross?Math.max(0,m.sisa):"",p.invNo||"",xDate(p.invDue),p.grup&&groupOf(p).length>1?"Grup "+groupOf(p).length+" PT":"",p.catatan||"",p.keterangan||""]});
   return {head,rows};
 }
@@ -2910,7 +2919,7 @@ async function xlsxDownload(pic,R,all){
   const list=mine.filter(inR);
   const wb=XLSX.utils.book_new();
   const {head,rows}=xRows(list);
-  XLSX.utils.book_append_sheet(wb,xSheet([head].concat(rows),[5,12,10,12,10,22,26,15,26,8,26,16,15,24,14,12,12,13,12,24,15,12,24,14,18,12,11,30,30],[14,15,16,17,20,23],[1,18,21,25]),"Data");
+  XLSX.utils.book_append_sheet(wb,xSheet([head].concat(rows),[5,12,10,12,10,22,26,15,26,8,9,26,16,15,24,14,12,12,13,12,24,15,12,24,14,18,12,11,30,30],[15,16,17,18,21,24],[1,19,22,26]),"Data");
   // ringkasan periode (angka sama dengan laporan kinerja)
   const per=all?{f:R.f,t:R.t}:R,sum=[["Ringkasan "+(pic==="__all"?"semua PIC":pic)],["Periode",all?"Semua data":rpRangeLabel(per.f,per.t)],["Dibuat",new Date().toLocaleString("id-ID")],[],
     ["PIC","Lead masuk","Closing","Closing rate","Omzet","Uang masuk","Piutang","Waiting DP (belum bayar)","Tagihan lewat jatuh tempo"]];
@@ -2935,7 +2944,7 @@ function salesRows(list){
     .sort((a,b)=>(a.d+"|"+rpDeal(a.p)+"|"+String(N(a.p.no)).padStart(6,"0")).localeCompare(b.d+"|"+rpDeal(b.p)+"|"+String(N(b.p.no)).padStart(6,"0")))
     .map((x,i)=>{const p=x.p,m=money(p),mo=+x.d.slice(5,7)||0,done=has(p,"Serah Terima")||!!p.selesai,price=m.gross?m.net:N(p.priceDeal),vo=p.layanan==="Sewa Virtual Office";
       return [i+1,xDate(p.created),p.sumber||"",p.perusahaan||p.nama||"",p.vo||"",p.kota||"",lc(p.brand),vo?"VOR":p.paket||"",done?"DONE":"Still Process","",mo||"",mo?MON_EN[mo-1]:"",+x.d.slice(0,4)||"",
-        price,vo&&!(N(p.dp)>0)?N(p.lunas):N(p.dp),N(p.lunas),"","","",0,price,p.keterangan||"",lc(p.pic),"",lc(p.pic),vo?p.paket||"":"",vo?price:""]});
+        price,vo&&!(N(p.dp)>0)?N(p.lunas):N(p.dp),N(p.lunas),"","","",0,price,p.keterangan||"",lc(p.pic),"",lc(p.pic),vo?p.paket||"":p.paketVo||"",vo?price:""]});
 }
 async function salesDownload(pic,R,all){
   await loadXlsx();
