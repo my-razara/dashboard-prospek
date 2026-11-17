@@ -1279,9 +1279,10 @@ function salesRows_(items) {
       const price = x.mo.gross ? x.mo.net : (Number(o.priceDeal) || 0);
       const vo = o.layanan === 'Sewa Virtual Office';
       const lc = v => txt(String(v || '').toLowerCase());
-      return [i + 1, salesDate_(o.created), txt(o.sumber), txt(o.perusahaan || o.nama), txt(o.vo), txt(o.kota), lc(o.brand), txt(o.paket),
+      return [i + 1, salesDate_(o.created), txt(o.sumber), txt(o.perusahaan || o.nama), txt(o.vo), txt(o.kota), lc(o.brand), vo ? 'VOR' : txt(o.paket),
         x.done ? 'DONE' : 'Still Process', '', m || '', m ? MON_TXT[m - 1] : '', Number(x.deal.slice(0, 4)) || '',
-        price, Number(o.dp) || 0, Number(o.lunas) || 0, '', '', '', '=SUM(Q' + r + ':S' + r + ')', '=N(N' + r + ')-N(T' + r + ')',
+        // Virtual Office: DP diisi sama dengan pelunasan (biasanya langsung lunas tanpa DP)
+        price, vo && !(Number(o.dp) > 0) ? (Number(o.lunas) || 0) : (Number(o.dp) || 0), Number(o.lunas) || 0, '', '', '', '=SUM(Q' + r + ':S' + r + ')', '=N(N' + r + ')-N(T' + r + ')',
         txt(o.keterangan), lc(o.pic), '', lc(o.pic), vo ? txt(o.paket) : '', vo ? price : ''];
     });
 }

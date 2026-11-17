@@ -2934,8 +2934,8 @@ function salesRows(list){
   return list.filter(p=>N(p.dp)>0||N(p.lunas)>0).map(p=>({p,d:String(p.created||"").slice(0,10)}))
     .sort((a,b)=>(a.d+"|"+rpDeal(a.p)+"|"+String(N(a.p.no)).padStart(6,"0")).localeCompare(b.d+"|"+rpDeal(b.p)+"|"+String(N(b.p.no)).padStart(6,"0")))
     .map((x,i)=>{const p=x.p,m=money(p),mo=+x.d.slice(5,7)||0,done=has(p,"Serah Terima")||!!p.selesai,price=m.gross?m.net:N(p.priceDeal),vo=p.layanan==="Sewa Virtual Office";
-      return [i+1,xDate(p.created),p.sumber||"",p.perusahaan||p.nama||"",p.vo||"",p.kota||"",lc(p.brand),p.paket||"",done?"DONE":"Still Process","",mo||"",mo?MON_EN[mo-1]:"",+x.d.slice(0,4)||"",
-        price,N(p.dp),N(p.lunas),"","","",0,price,p.keterangan||"",lc(p.pic),"",lc(p.pic),vo?p.paket||"":"",vo?price:""]});
+      return [i+1,xDate(p.created),p.sumber||"",p.perusahaan||p.nama||"",p.vo||"",p.kota||"",lc(p.brand),vo?"VOR":p.paket||"",done?"DONE":"Still Process","",mo||"",mo?MON_EN[mo-1]:"",+x.d.slice(0,4)||"",
+        price,vo&&!(N(p.dp)>0)?N(p.lunas):N(p.dp),N(p.lunas),"","","",0,price,p.keterangan||"",lc(p.pic),"",lc(p.pic),vo?p.paket||"":"",vo?price:""]});
 }
 async function salesDownload(pic,R,all){
   await loadXlsx();
