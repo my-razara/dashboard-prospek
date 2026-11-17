@@ -1290,17 +1290,21 @@ function salesSync_(ss) {
   const ext = SpreadsheetApp.openById(salesId_());
   const props = PropertiesService.getScriptProperties();
   let sh = ext.getSheetByName(SALES.sheet);
-  // pertama kali: simpan salinan isi lama sebelum ditimpa
-  if (sh && !props.getProperty('SALES_INIT')) {
-    try { sh.copyTo(ext).setName(SALES.sheet + ' (lama)'); } catch (e) {}
-  }
   if (!sh) sh = ext.insertSheet(SALES.sheet);
-  props.setProperty('SALES_INIT', '1');
+  const old = ext.getSheetByName(SALES.sheet + ' (lama)');
+  if (old) { try { ext.deleteSheet(old); } catch (e) {} }
   const nc = SALES.head.length, n = rows.length + 1;
+  // isi lama dihapus total (isi, format, validasi, format bersyarat, filter, kolom & baris berlebih) lalu ditulis ulang
   const f = sh.getFilter();
   if (f) f.remove();
-  sh.clear();
+  try { sh.getBandings().forEach(b => b.remove()); } catch (e) {}
+  sh.setFrozenRows(0); sh.setFrozenColumns(0);
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clear().clearDataValidations().clearNote();
+  sh.clearConditionalFormatRules();
+  if (sh.getMaxColumns() > nc) sh.deleteColumns(nc + 1, sh.getMaxColumns() - nc);
   if (sh.getMaxColumns() < nc) sh.insertColumnsAfter(sh.getMaxColumns(), nc - sh.getMaxColumns());
+  const keepRows = Math.max(n + 50, 100);
+  if (sh.getMaxRows() > keepRows) sh.deleteRows(keepRows + 1, sh.getMaxRows() - keepRows);
   if (sh.getMaxRows() < n + 1) sh.insertRowsAfter(sh.getMaxRows(), n + 1 - sh.getMaxRows());
   sh.getRange(1, 1, n, nc).setValues([SALES.head].concat(rows));
   sh.getRange(1, 1, 1, nc).setFontWeight('bold').setBackground('#14213D').setFontColor('#FFFFFF');
