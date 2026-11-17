@@ -1242,9 +1242,11 @@ function hapusSheetTakTerpakai() {
 // Satu baris = satu data yang sudah bayar (ada DP atau pelunasan), urut tanggal DP.
 const SALES = {
   sheet: 'sales-rpt',
-  head: ['No.', 'Tanggal Masuk', 'Tanggal DP', 'Iklan', 'Klien', 'Layanan', 'Packages', 'VO Partner', 'Kab/Kota', 'Branch',
-    'Status', 'Tahap', 'Month', 'MonthTxt', 'Year', 'Price Deal', 'DP', 'Pelunasan', 'Tanggal Pelunasan', 'Sisa Tagihan', 'Remarks', 'PIC'],
-  dates: [2, 3, 19], money: [16, 17, 18, 20]
+  // urutan & nama kolom sama dengan format awal sheet sales-rpt (+ Tanggal DP di paling kanan)
+  head: ['No.', 'In Date', 'Iklan', 'Klien', 'VO Partner', 'Provinsi', 'Branch', 'Packages', 'Status', 'Nama Agen VO', 'Month', 'MonthTxt', 'Year',
+    'Price Deal', 'DP', 'Pelunasan', 'Bayar Notaris', 'Bayar VO / Lainnya', 'Bayar Other', 'Total x y z', 'Income', 'Remarks', 'PIC', 'Fee', 'Real PIC',
+    'Paket VO', 'Harga VO', 'Tanggal DP'],
+  dates: [2, 28], money: [14, 15, 16, 17, 18, 19, 20, 21, 24, 27]
 };
 
 function salesId_() {
@@ -1261,27 +1263,25 @@ function salesDate_(s) {
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : '';
 }
 
-// baris laporan dari data aplikasi (dipakai juga untuk tes)
+// baris laporan dari data aplikasi (dipakai juga untuk tes). Total x y z & Income berupa rumus.
 function salesRows_(items) {
-  const PROC_ = PROC;
+  const txt = v => { v = String(v == null ? '' : v); return /^[=+\-@]/.test(v) ? "'" + v : v; };
   return items
     .filter(o => (Number(o.dp) || 0) > 0 || (Number(o.lunas) || 0) > 0)
     .map(o => {
       const st = Array.isArray(o.statuses) ? o.statuses : String(o.statuses || '').split(',').map(x => x.trim());
-      let c = -1;
-      PROC_.forEach((x, i) => { if (st.indexOf(x) >= 0) c = i; });
-      if (c < 0) c = 0;  // sudah bayar tapi belum dicentang tahapnya (sama seperti di aplikasi)
       const deal = String(((Number(o.dp) || 0) > 0 ? o.tglDp : o.tglLunas) || o.tglDp || o.tglLunas || o.created || '').slice(0, 10);
-      const mo = money_(o);
-      return { k: deal + '|' + String(o.created || '') + '|' + Number(o.no || 0), o: o, deal: deal, done: st.indexOf('Serah Terima') >= 0 || !!o.selesai, tahap: c >= 0 ? PROC_[c] : '', mo: mo };
+      return { k: deal + '|' + String(o.created || '') + '|' + Number(o.no || 0), o: o, deal: deal, done: st.indexOf('Serah Terima') >= 0 || !!o.selesai, mo: money_(o) };
     })
     .sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : 0)
     .map((x, i) => {
-      const o = x.o, m = Number(x.deal.slice(5, 7)) || 0;
-      return [i + 1, salesDate_(o.created), salesDate_(o.tglDp), o.sumber || '', o.perusahaan || o.nama || '', o.layanan || '', o.paket || '',
-        o.vo || '', o.kota || '', o.brand || '', x.done ? 'DONE' : 'Still Process', x.tahap, m || '', m ? MON_TXT[m - 1] : '',
-        Number(x.deal.slice(0, 4)) || '', x.mo.gross ? x.mo.net : (Number(o.priceDeal) || 0), Number(o.dp) || 0, Number(o.lunas) || 0,
-        salesDate_(o.tglLunas), x.mo.gross ? Math.max(0, Number(x.mo.sisa) || 0) : '', o.keterangan || '', o.pic || ''];
+      const o = x.o, m = Number(x.deal.slice(5, 7)) || 0, r = i + 2;
+      const price = x.mo.gross ? x.mo.net : (Number(o.priceDeal) || 0);
+      const vo = o.layanan === 'Sewa Virtual Office';
+      return [i + 1, salesDate_(o.created), txt(o.sumber), txt(o.perusahaan || o.nama), txt(o.vo), txt(o.kota), txt(o.brand), txt(o.paket),
+        x.done ? 'DONE' : 'Still Process', '', m || '', m ? MON_TXT[m - 1] : '', Number(x.deal.slice(0, 4)) || '',
+        price, Number(o.dp) || 0, Number(o.lunas) || 0, '', '', '', '=SUM(Q' + r + ':S' + r + ')', '=N(N' + r + ')-N(T' + r + ')',
+        txt(o.keterangan), txt(o.pic), '', txt(o.pic), vo ? txt(o.paket) : '', vo ? price : '', salesDate_(o.tglDp)];
     });
 }
 
@@ -1307,10 +1307,10 @@ function salesSync_(ss) {
   if (sh.getMaxRows() > keepRows) sh.deleteRows(keepRows + 1, sh.getMaxRows() - keepRows);
   if (sh.getMaxRows() < n + 1) sh.insertRowsAfter(sh.getMaxRows(), n + 1 - sh.getMaxRows());
   sh.getRange(1, 1, n, nc).setValues([SALES.head].concat(rows));
-  sh.getRange(1, 1, 1, nc).setFontWeight('bold').setBackground('#14213D').setFontColor('#FFFFFF');
+  sh.getRange(1, 1, 1, nc).setFontWeight('bold');
   if (rows.length) {
     SALES.dates.forEach(c => sh.getRange(2, c, rows.length, 1).setNumberFormat('dd-MMM-yy'));
-    SALES.money.forEach(c => sh.getRange(2, c, rows.length, 1).setNumberFormat('#,##0'));
+    SALES.money.forEach(c => sh.getRange(2, c, rows.length, 1).setNumberFormat('#,##0;-#,##0;"-"'));
   }
   sh.setFrozenRows(1);
   sh.getRange(1, 1, n, nc).createFilter();

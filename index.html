@@ -2873,14 +2873,14 @@ async function xlsxDownload(pic,R,all){
 }
 
 // ---------- Sales report (kolom sama dengan sheet sales-rpt; 1 baris = 1 data yang sudah bayar) ----------
-const SALES_HEAD=["No.","Tanggal Masuk","Tanggal DP","Iklan","Klien","Layanan","Packages","VO Partner","Kab/Kota","Branch","Status","Tahap","Month","MonthTxt","Year","Price Deal","DP","Pelunasan","Tanggal Pelunasan","Sisa Tagihan","Remarks","PIC"];
+const SALES_HEAD=["No.","In Date","Iklan","Klien","VO Partner","Provinsi","Branch","Packages","Status","Nama Agen VO","Month","MonthTxt","Year","Price Deal","DP","Pelunasan","Bayar Notaris","Bayar VO / Lainnya","Bayar Other","Total x y z","Income","Remarks","PIC","Fee","Real PIC","Paket VO","Harga VO","Tanggal DP"];
 const MON_EN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function salesRows(list){
   return list.filter(p=>N(p.dp)>0||N(p.lunas)>0).map(p=>({p,d:String(rpDeal(p)).slice(0,10)}))
     .sort((a,b)=>(a.d+"|"+a.p.created+"|"+N(a.p.no)).localeCompare(b.d+"|"+b.p.created+"|"+N(b.p.no)))
-    .map((x,i)=>{const p=x.p,m=money(p),mo=+x.d.slice(5,7)||0,c=curStep(p),done=has(p,"Serah Terima")||!!p.selesai;
-      return [i+1,xDate(p.created),xDate(p.tglDp),p.sumber||"",p.perusahaan||p.nama||"",p.layanan||"",p.paket||"",p.vo||"",p.kota||"",p.brand||"",done?"DONE":"Still Process",c>=0?PROC[c]:"",mo||"",mo?MON_EN[mo-1]:"",+x.d.slice(0,4)||"",
-        m.gross?m.net:N(p.priceDeal),N(p.dp),N(p.lunas),xDate(p.tglLunas),m.gross?Math.max(0,m.sisa):"",p.keterangan||"",p.pic||""]});
+    .map((x,i)=>{const p=x.p,m=money(p),mo=+x.d.slice(5,7)||0,done=has(p,"Serah Terima")||!!p.selesai,price=m.gross?m.net:N(p.priceDeal),vo=p.layanan==="Sewa Virtual Office";
+      return [i+1,xDate(p.created),p.sumber||"",p.perusahaan||p.nama||"",p.vo||"",p.kota||"",p.brand||"",p.paket||"",done?"DONE":"Still Process","",mo||"",mo?MON_EN[mo-1]:"",+x.d.slice(0,4)||"",
+        price,N(p.dp),N(p.lunas),"","","",0,price,p.keterangan||"",p.pic||"","",p.pic||"",vo?p.paket||"":"",vo?price:"",xDate(p.tglDp)]});
 }
 async function salesDownload(pic,R,all){
   await loadXlsx();
@@ -2888,12 +2888,16 @@ async function salesDownload(pic,R,all){
   const list=mine.filter(p=>{const d=String(rpDeal(p)).slice(0,10);return d&&(all||(d>=R.f&&d<=R.t))});
   const rows=salesRows(list);
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,xSheet([SALES_HEAD].concat(rows),[5,12,12,12,26,26,10,14,14,11,13,15,7,9,7,14,14,14,13,14,30,10],[15,16,17,19],[1,2,18]),"sales-rpt");
+  const wsS=xSheet([SALES_HEAD].concat(rows),[5,11,11,26,12,16,11,10,13,13,7,9,7,13,13,13,13,15,12,12,13,28,10,10,10,10,12,11],[13,14,15,16,17,18,19,20,23,26],[1,27]);
+  // Total x y z & Income pakai rumus (kalau biaya diisi manual, ikut terhitung)
+  rows.forEach((r,i)=>{const R=i+2;wsS["T"+R]={t:"n",v:0,f:`SUM(Q${R}:S${R})`,z:"#,##0;-#,##0;\"-\""};wsS["U"+R]={t:"n",v:r[13],f:`N(N${R})-N(T${R})`,z:"#,##0;-#,##0;\"-\""};
+    ["N","O","P","AA"].forEach(c=>{const x=wsS[c+R];if(x&&x.t==="n")x.z="#,##0;-#,##0;\"-\""})});
+  XLSX.utils.book_append_sheet(wb,wsS,"sales-rpt");
   // ringkasan per PIC
-  const sum=[["Sales report "+(pic==="__all"?"semua PIC":pic)],["Periode tanggal DP",all?"Semua data":rpRangeLabel(R.f,R.t)],["Dibuat",new Date().toLocaleString("id-ID")],[],["PIC","Jumlah deal","Price Deal","DP","Pelunasan","Sisa Tagihan"]];
-  const tot=rs=>[rs.length,...[15,16,17,19].map(k=>rs.reduce((a,r)=>a+(N(r[k])||0),0))];
-  const names=[...new Set(rows.map(r=>r[21]).filter(Boolean))].sort();
-  names.forEach(n=>sum.push([n,...tot(rows.filter(r=>r[21]===n))]));
+  const sum=[["Sales report "+(pic==="__all"?"semua PIC":pic)],["Periode tanggal DP",all?"Semua data":rpRangeLabel(R.f,R.t)],["Dibuat",new Date().toLocaleString("id-ID")],[],["PIC","Jumlah deal","Price Deal","DP","Pelunasan","Income"]];
+  const tot=rs=>[rs.length,...[13,14,15,20].map(k=>rs.reduce((a,r)=>a+(N(r[k])||0),0))];
+  const names=[...new Set(rows.map(r=>r[22]).filter(Boolean))].sort();
+  names.forEach(n=>sum.push([n,...tot(rows.filter(r=>r[22]===n))]));
   if(names.length>1||!names.length)sum.push(["Total",...tot(rows)]);
   const ws2=XLSX.utils.aoa_to_sheet(sum);
   for(let Rw=5;Rw<sum.length;Rw++)[2,3,4,5].forEach(C=>{const c=ws2[XLSX.utils.encode_cell({r:Rw,c:C})];if(c&&c.t==="n")c.z="#,##0"});
