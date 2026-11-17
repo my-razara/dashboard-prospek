@@ -415,6 +415,21 @@ html:not(.is-dark) .themeBtn .ic-moon{display:block}
 .ads-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .ads-note{font-size:12px;color:var(--ink-3);margin-top:8px}
 .ads-err{font-size:13px;color:var(--lost);margin:6px 0}
+.boss{margin-bottom:4px}.boss[hidden],.boss-pic[hidden]{display:none!important}
+.boss-h{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.boss-h h2{margin:0;font-size:19px}.boss-h small{color:var(--muted);font-size:12.5px}
+.boss-act{display:flex;gap:8px;flex-wrap:wrap}.boss-act a.btn{text-decoration:none;color:inherit}
+.kpi .dl{font-size:12px;font-weight:700;margin-left:4px}.kpi .dl.up{color:#15803D}.kpi .dl.dn{color:#DC2626}.kpi .dl.eq{color:var(--muted)}
+.bp-wrap{overflow-x:auto}.home2>.card{min-width:0}
+.bp{width:100%;border-collapse:collapse;font-size:13.5px}
+.bp th{text-align:right;font-size:11.5px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bp td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bp th:first-child,.bp td:first-child{text-align:left}.bp td:first-child{font-weight:700}
+.bp tr.tot td{font-weight:700;border-bottom:0;border-top:2px solid var(--line)}
+.bp .rate{display:inline-block;min-width:44px;padding:2px 7px;border-radius:99px;background:var(--step-soft);font-weight:700;font-size:12.5px;text-align:center}
+/* atasan: tampilan ringkas, tanpa menu & tombol kerja harian PIC */
+body.ro [data-view="tugas"],body.ro [data-view="fu"],body.ro .home-fu,body.ro a.wa,body.ro [data-wapick],body.ro #invEdit,body.ro #invShare,body.ro .bulk-cta{display:none!important}
+body.ro .bnav{grid-template-columns:repeat(4,1fr)}
 .home2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
 @media (max-width:1180px){.home2{grid-template-columns:1fr}}
 .home2 .card{margin:0}
@@ -863,11 +878,17 @@ dialog .mb{overflow-x:hidden}
     <div class="card"><h3>Tagihan lewat jatuh tempo <small id="tgDueN"></small></h3><ul class="fu" id="tgDue"></ul></div>
     <div class="card"><h3>Lead iklan belum dinilai <small id="tgLqN"></small></h3><ul class="fu" id="tgLq"></ul></div>
   </section>
+  <section class="boss" id="boss" data-mv="home" hidden>
+    <div class="boss-h"><div><h2>Penjualan <span id="bossMon"></span></h2><small>Dibanding bulan lalu · semua PIC</small></div>
+      <div class="boss-act"><a class="btn" id="bossSales" target="_blank" rel="noopener">Buka Sales Report</a><button type="button" class="btn primary" id="bossRep">Download laporan</button></div></div>
+    <div class="kpis" id="bossKpi"></div>
+  </section>
   <section class="kpis" id="kpis" data-mv="home"></section>
   <section class="kpis fin" id="fin" data-mv="home"></section>
   <section class="home2" data-mv="home">
     <div class="card"><h3>Posisi alur <button type="button" class="lnk" data-go="alur">Lihat alur →</button></h3><div class="hflow" id="homeFlow"></div></div>
-    <div class="card"><h3>Follow-up hari ini <button type="button" class="lnk" data-go="fu">Lihat semua →</button></h3><ul class="fu" id="homeFu"></ul></div>
+    <div class="card home-fu"><h3>Follow-up hari ini <button type="button" class="lnk" data-go="fu">Lihat semua →</button></h3><ul class="fu" id="homeFu"></ul></div>
+    <div class="card boss-pic" hidden><h3>Performa PIC <small id="bossPicSub"></small></h3><div class="bp-wrap"><table class="bp" id="bossPic"></table></div></div>
   </section>
   <section class="card adsc" id="adsCard" data-mv="home" hidden>
     <h3><span>Google Ads: leads, kualitas & biaya <small id="adsSub"></small></span><button type="button" class="btn sm" id="adsSyncBtn">Sinkron ulang sheet WA & vendor</button></h3>
@@ -1475,6 +1496,9 @@ function applyRole(){
   const a=isAdmin();
   if(!ls.get("pm_view",null))setView(a?"home":"tugas");
   const o=isOwner();document.body.classList.toggle("ro",isAtasan());
+  $("#boss").hidden=!isAtasan();document.querySelector(".boss-pic").hidden=!isAtasan();
+  if(isAtasan()){if(user.salesUrl){$("#bossSales").href=user.salesUrl;$("#bossSales").style.display=""}else $("#bossSales").style.display="none";
+    if(["tugas","fu"].includes(document.body.dataset.view))setView("home")}
   $("#setBtn").style.display=o?"":"none";
   $("#sheetBtn").style.display=o&&user.sheetUrl?"":"none";if(o&&user.sheetUrl)$("#sheetBtn").href=user.sheetUrl;
   $("#salesBtn").style.display=a&&user.salesUrl?"":"none";if(a&&user.salesUrl)$("#salesBtn").href=user.salesUrl;
@@ -1724,7 +1748,8 @@ function render(){
     <div class="kpi"><div class="l">Prospek aktif</div><div class="n num">${pros.length}</div><div class="h">${new Set(B.map(leadKey)).size} lead dari ${B.length} PT · closing ${cl+lo?Math.round(cl/(cl+lo)*100):0}% (${cl} klien, ${lo} lose)</div></div>
     <div class="kpi"><div class="l">Dalam pengerjaan</div><div class="n num">${proc.length}</div><div class="h">${proc.filter(p=>curStep(p)===0).length} waiting DP · ${proc.filter(p=>has(p,"Waiting Lunas")&&!has(p,"Lunas")).length} menunggu lunas</div></div>
     <div class="kpi"><div class="l">Serah terima bulan ini</div><div class="n num">${doneMonth}</div><div class="h">total selesai: ${B.filter(p=>phase(p)==="selesai").length}</div></div>
-    <div class="kpi ${late?"warn":""}"><div class="l">Follow-up belum dikerjakan</div><div class="n num">${late}</div><div class="h">${inboxN} di inbox · ${missedN} ada FU terlewat</div></div>`;
+    ${isAtasan()?`<div class="kpi"><div class="l">Klien (deal)</div><div class="n num">${cl}</div><div class="h">${lo} lose · ${B.filter(p=>phase(p)==="selesai").length} sudah serah terima</div></div>`:`<div class="kpi ${late?"warn":""}"><div class="l">Follow-up belum dikerjakan</div><div class="n num">${late}</div><div class="h">${inboxN} di inbox · ${missedN} ada FU terlewat</div></div>`}`;
+  if(isAtasan())try{renderBoss()}catch(e){}
   const OMk=orderMap(),RP=B.filter(p=>OMk[p.id]&&paidRec(p)),rpLead=new Set(RP.map(leadKey)).size,rpVal=RP.reduce((a,p)=>a+pdOf(p),0);
   const C=B.filter(isClient);let deal=0,dp=0,lun=0,sisa=0,pph=0,ret=0,disk=0;
   C.forEach(p=>{const m=money(p);deal+=pdOf(p);dp+=N(p.dp);lun+=N(p.lunas);sisa+=Math.max(0,m.sisa);pph+=N(p.pph);ret+=N(p.retur);disk+=N(p.diskon)});
@@ -3038,6 +3063,27 @@ $("#waPdf").onclick=async()=>{
   const done=await sendDocWA(p,b.dataset.mode,$("#waText").value.trim(),b,lbl);if(done)$("#waDlg").close();
 };
 $("#waCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("#waText").value);toast("Pesan disalin")}catch(e){$("#waText").select();toast("Tekan lama lalu salin")}};
+// ---------- tampilan atasan: penjualan bulan ini + performa per PIC ----------
+function renderBoss(){
+  const R=rpPeriod("month");if(!R)return;
+  const cur=rpMetrics(items,R.f,R.t),prev=rpMetrics(items,R.pf,R.pt);
+  $("#bossMon").textContent=BLN[+R.f.slice(5,7)-1]+" "+R.f.slice(0,4);
+  const dl=(a,b,inv)=>{if(!b&&!a)return `<span class="dl eq">–</span>`;if(!b)return `<span class="dl ${inv?"dn":"up"}">baru</span>`;const d=Math.round((a-b)/b*100);if(!d)return `<span class="dl eq">0%</span>`;const up=d>0;return `<span class="dl ${up!==!!inv?"up":"dn"}">${up?"▲":"▼"} ${Math.abs(d)}%</span>`};
+  const k=(l,n,h)=>`<div class="kpi"><div class="l">${l}</div><div class="n num">${n}</div><div class="h">${h}</div></div>`;
+  $("#bossKpi").innerHTML=
+    k("Omzet (deal baru)",rpS(cur.omzet),`${dl(cur.omzet,prev.omzet)} bulan lalu ${rpS(prev.omzet)}`)+
+    k("Uang masuk",rpS(cur.uang),`${dl(cur.uang,prev.uang)} bulan lalu ${rpS(prev.uang)}`)+
+    k("Piutang",rpS(cur.piutang),`${dl(cur.piutang,prev.piutang,true)} akhir bulan lalu ${rpS(prev.piutang)}`)+
+    k("Deal / closing",cur.closing+` <small style="font-size:14px;color:var(--muted)">dari ${cur.leads} lead</small>`,`${dl(cur.closing,prev.closing)} closing rate ${Math.round(cur.rate*100)}% (bulan lalu ${Math.round(prev.rate*100)}%)`);
+  const names=[...new Set((settings.pics||[]).concat(items.map(p=>p.pic)).filter(Boolean))].filter(n=>items.some(p=>p.pic===n));
+  const rows=names.map(n=>({n,m:rpMetrics(items.filter(p=>p.pic===n),R.f,R.t)})).filter(x=>x.m.leads||x.m.closing||x.m.uang||x.m.piutang).sort((a,b)=>b.m.omzet-a.m.omzet||b.m.closing-a.m.closing);
+  const tr=(n,m,c)=>`<tr${c?` class="${c}"`:""}><td>${esc(n)}</td><td class="num">${m.leads}</td><td class="num">${m.closing}</td><td><span class="rate">${Math.round(m.rate*100)}%</span></td><td class="num">${rpS(m.omzet)}</td><td class="num">${rpS(m.uang)}</td><td class="num">${rpS(m.piutang)}</td></tr>`;
+  $("#bossPicSub").textContent=$("#bossMon").textContent;
+  $("#bossPic").innerHTML=`<thead><tr><th>PIC</th><th>Lead</th><th>Closing</th><th>Rate</th><th>Omzet</th><th>Uang masuk</th><th>Piutang</th></tr></thead><tbody>`+
+    (rows.length?rows.map(x=>tr(x.n,x.m)).join("")+tr("Total",cur,"tot"):`<tr><td colspan="7" style="text-align:center;color:var(--muted)">Belum ada data bulan ini.</td></tr>`)+`</tbody>`;
+}
+$("#bossRep").onclick=()=>$("#repBtn").click();
+
 // ---------- kirim WhatsApp beruntun (tugas hari ini) ----------
 // WhatsApp tidak bisa mengirim otomatis ke banyak nomor (kecuali WhatsApp Business API berbayar),
 // jadi chat dibuka satu per satu dengan pesan terisi; PIC tinggal tekan kirim lalu Lanjut.
