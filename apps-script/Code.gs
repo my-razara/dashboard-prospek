@@ -1104,10 +1104,12 @@ function remDays_(a, b) { // b - a (hari)
   return Math.round((d(b) - d(a)) / 864e5);
 }
 // sama dengan fuState() di aplikasi
-function remFu_(p, today) {
+function remFu_(p, today, paidG) {
   if (p.grup && p.grup !== p.id) return { active: false };
   const ph = remPhase_(p);
   if (['lose', 'spam', 'delete', 'selesai'].indexOf(ph) >= 0 || remHas_(p, 'Klien') || remStep_(p) >= 1 || !p.created) return { active: false };
+  // sudah DP / bayar (data ini atau PT lain di grupnya) = sudah deal, follow-up berhenti
+  if (remHasDp_(p) || (Number(p.lunas) || 0) > 0 || (paidG && paidG[p.grup || p.id])) return { active: false };
   const done = {};
   String(p.fuDone || '').split(';').forEach(x => { const a = x.split('@'), k = (a[0] || '').trim(); if (REM_FU_LABELS.indexOf(k) >= 0) done[k] = (a[1] || '').trim() || '1'; });
   const ch = p.fuChoice || (remHas_(p, 'Waiting DP') ? 'dp' : '');
@@ -1130,7 +1132,9 @@ function remEmails_(ss) {
 function remTasks_(items, pic, today) {
   const mine = items.filter(p => norm_(p.pic) === norm_(pic));
   const act = mine.filter(p => ['prospek', 'proses'].indexOf(remPhase_(p)) >= 0);
-  const fs = mine.map(p => [p, remFu_(p, today)]);
+  const paidG = {};
+  items.forEach(p => { if (remHasDp_(p) || (Number(p.lunas) || 0) > 0) paidG[p.grup || p.id] = 1; });
+  const fs = mine.map(p => [p, remFu_(p, today, paidG)]);
   const inbox = fs.filter(x => x[1].inbox).map(x => x[0]);
   const fu = fs.filter(x => x[1].active && x[1].label && !x[1].done).sort((a, b) => a[1].date.localeCompare(b[1].date)).map(x => ({ p: x[0], s: x[1] }));
   const dp = act.filter(p => remStep_(p) === 0 && !remHasDp_(p)).sort((a, b) => String(a.created).localeCompare(String(b.created)));

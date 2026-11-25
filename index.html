@@ -1702,10 +1702,15 @@ function orderMap(){
   });
   ordCache={ref:items,len:items.length,map};return map;
 }
+// grup/data yang sudah bayar (DP atau pelunasan) -> sudah deal, follow-up berhenti
+let paidCache={ref:null,len:-1,map:null};
+function paidGroups(){if(paidCache.ref!==items||paidCache.len!==items.length){const m={};items.forEach(x=>{if(hasDp(x)||N(x.lunas)>0)m[x.grup||x.id]=1});paidCache={ref:items,len:items.length,map:m}}return paidCache.map}
 function fuState(p){
   if(isMember(p))return {active:false};
   const ph=phase(p);
   if(["lose","spam","delete","selesai"].includes(ph)||has(p,"Klien")||curStep(p)>=1||!p.created)return {active:false};
+  // follow-up hanya untuk yang benar-benar masih prospek: sudah DP / bayar = sudah deal
+  if(hasDp(p)||N(p.lunas)>0||paidGroups()[p.grup||p.id])return {active:false};
   const done=fuDoneMap(p),{seq,ch}=fuSeq(p,done);
   let idx=-1;seq.forEach((s,i)=>{if(addDays(p.created,s[1])<=TODAY)idx=i});
   if(idx<0)return {active:true,upcoming:true,next:seq[0][0],nextDate:addDays(p.created,seq[0][1]),choice:ch};
@@ -3578,12 +3583,13 @@ function renderToday({ib,due,dpWait,overdue,lqP,B}){
     tag:`<span class="tg ${late?"late":"fu"}">${esc(s.label)}${late?" · "+Math.abs(d)+" hari":""}</span>`,sub:pSub(p,s.choice==="promo"?"promo: "+promoText():""),
     lead:`<button type="button" class="ck" data-fu="${p.id}" aria-label="Tandai ${esc(s.label)} sudah" title="Tandai ${esc(s.label)} sudah"></button>`,
     act:(()=>{const w=waFuLink(p,s.label);return w?`<a class="wab" href="${w}" target="_blank" rel="noopener" aria-label="WhatsApp ${esc(s.label)}">${WA_SVG}</a>`:""})()})});
-  dpWait.forEach(p=>rows.push({k:"dp",p,late:false,ord:"1"+p.created,tag:`<span class="tg dp">Waiting DP</span>`,sub:pSub(p,pdOf(p)?"Deal "+rpS(pdOf(p)):"price deal belum diisi"),
+  const fuIds=new Set(rows.map(r=>r.p.id));
+  dpWait.filter(p=>!fuIds.has(p.id)).forEach(p=>rows.push({k:"dp",p,late:false,ord:"1"+p.created,tag:`<span class="tg dp">Waiting DP</span>`,sub:pSub(p,pdOf(p)?"Deal "+rpS(pdOf(p)):"price deal belum diisi"),
     act:waLink(p.wa)?`<a class="wab" href="${waLink(p.wa)}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="INV" aria-label="Kirim proforma via WhatsApp">${WA_SVG}</a>`:""}));
   overdue.forEach(p=>rows.push({k:"due",p,late:true,ord:p.invDue,tag:`<span class="tg late">Tagihan · ${Math.abs(dd(p.invDue))} hari</span>`,sub:pSub(p,"sisa "+rpS(money(p).sisa)),
     act:waLink(p.wa)?`<a class="wab" href="${waLink(p.wa)}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="TAGIH" aria-label="Tagih via WhatsApp">${WA_SVG}</a>`:""}));
   const lq=lqP.map(p=>({k:"lq",p,sub:pSub(p,p.sumber+" · masuk "+fmtD(p.created))}));
-  const cnt={all:rows.length+lq.length,fu:rows.filter(r=>r.k==="fu").length,dp:dpWait.length,due:overdue.length,lq:lq.length};
+  const cnt={all:rows.length+lq.length,fu:rows.filter(r=>r.k==="fu").length,dp:rows.filter(r=>r.k==="dp").length,due:overdue.length,lq:lq.length};
   if(cnt[tgChip]===0&&tgChip!=="all")tgChip="all";
   $("#tgChips").innerHTML=[["all","Semua"],["fu","Follow-up"],["dp","Waiting DP"],["due","Tagihan"],["lq","Nilai lead"]].filter(([k])=>k==="all"||cnt[k]).map(([k,l])=>`<button type="button" class="chipb${tgChip===k?" on":""}" data-tgc="${k}" role="tab" aria-selected="${tgChip===k}">${l}<em>${cnt[k]}</em></button>`).join("");
   // progres hari ini: follow-up yang dicentang hari ini
