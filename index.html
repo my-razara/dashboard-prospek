@@ -1246,6 +1246,33 @@ dialog.usrdlg{width:min(720px,96vw)}
 .mode-card .mc i.f{background:#0E9F6E}
 .mode-card .mc b{display:block;font-size:14px}.mode-card .mc small{display:block;font-size:11.5px;color:var(--ink-3);line-height:1.3}
 .mode-card .mc em{position:absolute;top:6px;right:9px;font-style:normal;color:#3B47D9;font-weight:800;font-size:12px}
+/* ================= UI v2: pilih aplikasi ================= */
+.hub{position:fixed;inset:0;z-index:300;background:var(--bg);overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:calc(28px + env(safe-area-inset-top,0px)) 18px 28px}
+.hub[hidden]{display:none}
+body.hubon{overflow:hidden}
+.hub-in{width:100%;max-width:460px}
+@media (min-height:700px){.hub{align-items:center}}
+.hub-top{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.hub-logo{width:52px!important;height:52px!important;border-radius:15px!important;flex:none}
+.hub-top small{display:block;color:var(--ink-3);font-size:13px}
+.hub-top h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.hub-q{margin:0 2px 10px;color:var(--ink-2);font-weight:650;font-size:14px}
+.hub-list{display:flex;flex-direction:column;gap:10px}
+.hub-card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:16px;color:var(--ink);text-decoration:none;font:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+.hub-card:hover{border-color:color-mix(in srgb,var(--step) 45%,var(--line))}
+.hub-card:active{transform:scale(.99)}
+.hub-card.off{opacity:.55;cursor:default}
+.hub-card .hi{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;flex:none}
+.hub-card .hi.p{background:linear-gradient(145deg,#4653E6,#2F3AC4)}
+.hub-card .hi.f{background:linear-gradient(145deg,#12B886,#08795A)}
+.hub-card .hi.v{background:linear-gradient(145deg,#A0A8BA,#6E7890);font-size:15px}
+.hub-card .ht{flex:1;min-width:0}
+.hub-card .ht b{display:block;font-size:16.5px}
+.hub-card .ht small{display:block;color:var(--ink-3);font-size:13px}
+.hub-card .hg{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--ink-3);background:var(--panel-2);border-radius:8px;padding:3px 8px;white-space:nowrap}
+.hub-card .hg:empty{display:none}
+.hub-note{color:var(--ink-3);font-size:12.5px;margin:16px 4px 0;line-height:1.5}
+.side-brand{cursor:pointer}
 /* ===/V2=== */
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1254,7 +1281,7 @@ dialog.usrdlg{width:min(720px,96vw)}
 <div class="shell">
 <aside class="side" aria-label="Menu utama">
   <div class="side-brand"><span class="side-logo app-logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
-  <div class="mode-sw" data-finonly hidden><span class="on">Prospek</span><a href="#" data-fin-go>Finance</a></div>
+  <div class="mode-sw" data-finonly hidden><span class="on">Prospek</span><a href="#" data-fin-go>Finance 🔒</a></div>
   <button class="btn primary side-add" type="button" data-proxy="#addBtn">+ Tambah prospek</button>
   <nav class="side-nav">
     <div class="side-h">Menu</div>
@@ -1452,9 +1479,21 @@ dialog.usrdlg{width:min(720px,96vw)}
   </section>
   </div>
 </dialog>
+<div id="hub" class="hub" hidden role="dialog" aria-modal="true" aria-labelledby="hubTtl">
+  <div class="hub-in">
+    <div class="hub-top"><span class="app-logo hub-logo"><svg viewBox="0 0 64 64" width="26" height="26" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><div><small id="hubDate"></small><h1 id="hubTtl">Halo</h1></div></div>
+    <p class="hub-q">Mau buka apa?</p>
+    <div class="hub-list">
+      <button type="button" class="hub-card" data-hub="prospek"><span class="hi p">P</span><span class="ht"><b>Prospek</b><small>Klien, follow-up, pengerjaan, invoice</small></span><span class="hg" id="hubPro"></span></button>
+      <a class="hub-card" data-hub="finance" href="#"><span class="hi f">F</span><span class="ht"><b>Finance</b><small>Kas, transaksi, laba rugi, pajak</small></span><span class="hg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>PIN</span></a>
+      <div class="hub-card off" aria-disabled="true"><span class="hi v">VO</span><span class="ht"><b>Virtual Office</b><small>Kontrak &amp; tagihan sewa</small></span><span class="hg">Segera</span></div>
+    </div>
+    <p class="hub-note">Finance dikunci PIN lagi setiap dibuka, dan terkunci otomatis kalau ditinggal 15 menit.</p>
+  </div>
+</div>
 <dialog id="moreDlg" class="sheet" aria-label="Menu">
   <div class="sheet-in">
-    <div class="mode-card" data-finonly hidden><span class="mc on"><i>P</i><span><b>Prospek</b><small>Klien, follow-up, invoice</small></span><em>✓</em></span><a class="mc" href="#" data-fin-go><i class="f">F</i><span><b>Finance</b><small>Kas, transaksi, pajak</small></span></a></div>
+    <div class="mode-card" data-finonly hidden><span class="mc on"><i>P</i><span><b>Prospek</b><small>Klien, follow-up, invoice</small></span><em>✓</em></span><a class="mc" href="#" data-fin-go><i class="f">F</i><span><b>Finance</b><small>Kas, transaksi, pajak · 🔒 PIN</small></span></a></div>
     <div class="sheet-who">Masuk sebagai <b id="whoName2"></b></div>
     <div id="syncTxt2" class="sheet-sync"></div>
     <button type="button" class="sheet-item" data-go="alur">Alur pengerjaan</button>
@@ -2062,8 +2101,30 @@ function loadData(d){
   try{bulkPaint()}catch(e){}
 }
 const FIN_URL=(window.APP_CONFIG&&APP_CONFIG.FIN_URL)||location.origin+"/dashboard-finance/";
+// halaman pilih aplikasi: muncul sekali tiap aplikasi dibuka (untuk yang punya lebih dari 1 modul)
+let hubDone=false;
+const ss_={get(k){try{return sessionStorage.getItem(k)}catch(e){return null}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
+function hubShow(){
+  if(!user)return;const d=new Date(Date.now()+7*3600e3),H=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],B=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  $("#hubDate").textContent=H[d.getUTCDay()]+", "+d.getUTCDate()+" "+B[d.getUTCMonth()]+" "+d.getUTCFullYear();
+  $("#hubTtl").textContent="Halo, "+user.name;
+  try{const n=tgLists?(tgLists.fu||[]).length+(tgLists.dp||[]).length+(tgLists.due||[]).length:0;$("#hubPro").textContent=!isAtasan()&&n?n+" tugas":""}catch(e){$("#hubPro").textContent=""}
+  $("[data-hub=finance]").href=FIN_URL;$("#hub").hidden=false;document.body.classList.add("hubon");
+}
+function hubHide(){$("#hub").hidden=true;document.body.classList.remove("hubon");ss_.set("pm_hub","1")}
+function hubAuto(){
+  if(hubDone||!user)return;hubDone=true;
+  if(!user.fin||ss_.get("pm_hub")||location.hash==="#p"){ss_.set("pm_hub","1");if(location.hash==="#p")history.replaceState(null,"",location.pathname+location.search);return}
+  hubShow();
+}
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-hub=prospek]")){hubHide();return}
+  if(e.target.closest("[data-hub=finance]")){ss_.set("pm_hub","1");return}
+  if(e.target.closest(".side-brand")&&user&&user.fin){hubShow();return}
+});
 function applyRole(){
   const a=isAdmin();
+  setTimeout(hubAuto,0);
   document.querySelectorAll("[data-finonly]").forEach(el=>el.hidden=!(user&&user.fin));
   document.querySelectorAll("[data-fin-go]").forEach(el=>el.href=FIN_URL);
   if(!ls.get("pm_view",null))setView(a?"home":"tugas");

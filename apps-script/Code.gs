@@ -178,8 +178,9 @@ function route_(q) {
     case 'userSetActive': return userSetActive(q.token, q.name, q.active);
     case 'userDelete': return userDelete(q.token, q.name, q.moveTo);
     case 'userSetFin': return userSetFin(q.token, q.name, q.fin, q.finPt);
-    case 'finWho': return finWho(q.token);
-    case 'finPayments': return finPayments(q.token, q.from);
+    case 'finWho': return finWho(q.token, q.fk);
+    case 'finPayments': return finPayments(q.token, q.from, q.fk);
+    case 'finUnlock': return finUnlock(q.token, q.pin);
   }
   throw new Error('UNKNOWN');
 }
@@ -1580,16 +1581,48 @@ function logoutAll_(name) {
 /* ---------------- Untuk aplikasi Finance ---------------- */
 // Aplikasi Finance (repo & spreadsheet terpisah) memakai login yang sama.
 // Server Finance memanggil finWho dengan token pengguna untuk memastikan siapa dia & aksesnya.
-function finWho(token) {
+// Finance & modul sensitif lain dikunci PIN lagi: kunci (fk) berlaku 30 menit sejak dipakai terakhir
+const FIN_KEY_MIN = 30;
+function finKey_(u, fk) {
+  const c = CacheService.getScriptCache(), v = fk ? c.get('FK_' + fk) : null;
+  if (!v || norm_(v) !== norm_(u.name)) throw new Error('FINLOCK');
+  c.put('FK_' + fk, v, FIN_KEY_MIN * 60);
+}
+
+function finUnlock(token, pin) {
   const u = auth_(token);
   if (!u.fin) throw new Error('NOFIN');
+  const cache = CacheService.getScriptCache(), key = norm_(u.name), fk = 'F_' + key, lk = 'L_' + key;
+  const until = Number(cache.get(lk) || 0);
+  if (until > Date.now()) throw new Error('LOCK:' + Math.max(1, Math.ceil((until - Date.now()) / 60000)));
+  if (String(pin || '').trim() !== u.pin) {
+    const fails = Number(cache.get(fk) || 0) + 1;
+    if (fails >= LOGIN_MAX) {
+      cache.put(lk, String(Date.now() + LOGIN_LOCK_MIN * 60000), LOGIN_LOCK_MIN * 60);
+      cache.remove(fk);
+      throw new Error('LOCK:' + LOGIN_LOCK_MIN);
+    }
+    cache.put(fk, String(fails), LOGIN_LOCK_MIN * 60);
+    throw new Error('BAD:' + (LOGIN_MAX - fails));
+  }
+  cache.remove(fk);
+  const k = Utilities.getUuid();
+  cache.put('FK_' + k, u.name, FIN_KEY_MIN * 60);
+  return { fk: k, minutes: FIN_KEY_MIN };
+}
+
+function finWho(token, fk) {
+  const u = auth_(token);
+  if (!u.fin) throw new Error('NOFIN');
+  finKey_(u, fk);
   return { name: u.name, role: u.role, fin: u.fin, finPt: u.finPt || '' };
 }
 
 // Pembayaran klien (DP & pelunasan) dari data Prospek, untuk dicocokkan dengan mutasi bank di Finance
-function finPayments(token, from) {
+function finPayments(token, from, fk) {
   const u = auth_(token);
   if (!u.fin) throw new Error('NOFIN');
+  finKey_(u, fk);
   const since = /^\d{4}-\d{2}-\d{2}$/.test(String(from || '')) ? String(from) : '2000-01-01';
   const out = [];
   readAll_(ss_()).forEach(p => {
