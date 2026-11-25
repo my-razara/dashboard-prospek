@@ -178,6 +178,7 @@ function route_(q) {
     case 'userSetActive': return userSetActive(q.token, q.name, q.active);
     case 'userDelete': return userDelete(q.token, q.name, q.moveTo);
     case 'userSetFin': return userSetFin(q.token, q.name, q.fin, q.finPt);
+    case 'userSetVo': return userSetVo(q.token, q.name, q.vo);
     case 'finWho': return finWho(q.token);
     case 'finPayments': return finPayments(q.token, q.from);
   }
@@ -417,7 +418,7 @@ function payload_(ss, u) {
   const all = u.role === 'admin' || u.role === 'atasan';
   if (!all) items = items.filter(o => norm_(o.pic) === norm_(u.name));
   return {
-    user: { name: u.name, role: u.role, fin: u.fin || '', finPt: u.finPt || '', sheetUrl: u.role === 'admin' ? ss.getUrl() : '', salesUrl: all ? salesUrl_() : '' },
+    user: { name: u.name, role: u.role, fin: u.fin || '', finPt: u.finPt || '', vo: u.vo || '', sheetUrl: u.role === 'admin' ? ss.getUrl() : '', salesUrl: all ? salesUrl_() : '' },
     items: items,
     settings: readSettings_(ss),
     budget: all ? readBudget_(ss) : [],
@@ -500,7 +501,7 @@ function nextInvNo_(sh, o, brands, tz) {
 function readUsers_(ss) {
   const sh = ss.getSheetByName(SHEET_USER);
   if (!sh || sh.getLastRow() < 2) return [];
-  const nc = Math.max(3, Math.min(7, sh.getLastColumn()));
+  const nc = Math.max(3, Math.min(8, sh.getLastColumn()));
   return sh.getRange(2, 1, sh.getLastRow() - 1, nc).getValues()
     .map((r, i) => ({ r: r, row: i + 2 }))
     .filter(x => String(x.r[0]).trim())
@@ -513,6 +514,8 @@ function readUsers_(ss) {
       // akses aplikasi Finance: admin selalu kelola; lainnya dari kolom "Akses Finance" (kelola / lihat / kosong)
       fin: norm_(x.r[2]) === 'admin' ? 'kelola' : (['kelola', 'lihat'].indexOf(norm_(x.r[5])) >= 0 ? norm_(x.r[5]) : ''),
       finPt: norm_(x.r[2]) === 'admin' ? '' : String(x.r[6] == null ? '' : x.r[6]).trim(),
+      // akses modul Virtual Office: admin selalu kelola; lainnya dari kolom "Akses Virtual Office"
+      vo: norm_(x.r[2]) === 'admin' ? 'kelola' : (['kelola', 'lihat'].indexOf(norm_(x.r[7])) >= 0 ? norm_(x.r[7]) : ''),
       row: x.row
     }));
 }
@@ -1456,7 +1459,7 @@ function setupAtasan() {
 }
 
 /* ---------------- Kelola pengguna (khusus admin, dari Pengaturan → Pengguna) ---------------- */
-const USER_HEAD = ['Nama', 'PIN', 'Peran (admin / atasan / pic)', 'Email', 'Status', 'Akses Finance (kelola / lihat)', 'PT Finance (kosong = semua)'];
+const USER_HEAD = ['Nama', 'PIN', 'Peran (admin / atasan / pic)', 'Email', 'Status', 'Akses Finance (kelola / lihat)', 'PT Finance (kosong = semua)', 'Akses Virtual Office (kelola / lihat)'];
 
 function adminOnly_(token) {
   const u = auth_(token);
@@ -1511,7 +1514,7 @@ function usersList(token) {
   items.forEach(o => { const k = norm_(o.pic); if (k) cnt[k] = (cnt[k] || 0) + 1; });
   return readUsers_(ss).map(u => {
     const until = Number(cache.get('L_' + norm_(u.name)) || 0);
-    return { name: u.name, role: u.role, email: u.email, active: u.active, fin: u.fin, finPt: u.finPt, hasPin: !!u.pin, data: cnt[norm_(u.name)] || 0,
+    return { name: u.name, role: u.role, email: u.email, active: u.active, fin: u.fin, finPt: u.finPt, vo: u.vo, hasPin: !!u.pin, data: cnt[norm_(u.name)] || 0,
       locked: until > now ? Math.ceil((until - now) / 60000) : 0 };
   });
 }
@@ -1639,5 +1642,14 @@ function userSetFin(token, name, fin, finPt) {
   if (u.role === 'admin') throw new Error('Admin selalu punya akses Finance penuh');
   const v = ['kelola', 'lihat'].indexOf(fin) >= 0 ? fin : '';
   userSheet_(ss).getRange(u.row, 6, 1, 2).setNumberFormat('@').setValues([[v, v ? String(finPt || '').trim() : '']]);
+  return true;
+}
+
+function userSetVo(token, name, vo) {
+  adminOnly_(token);
+  const ss = ss_(), u = userFind_(ss, name);
+  if (u.role === 'admin') throw new Error('Admin selalu punya akses Virtual Office penuh');
+  const v = ['kelola', 'lihat'].indexOf(vo) >= 0 ? vo : '';
+  userSheet_(ss).getRange(u.row, 8).setNumberFormat('@').setValue(v);
   return true;
 }
