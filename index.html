@@ -1839,22 +1839,49 @@ function orderMap(){
 // grup/data yang sudah bayar (DP atau pelunasan) -> sudah deal, follow-up berhenti
 let paidCache={ref:null,len:-1,map:null};
 function paidGroups(){if(paidCache.ref!==items||paidCache.len!==items.length){const m={};items.forEach(x=>{if(hasDp(x)||N(x.lunas)>0)m[x.grup||x.id]=1});paidCache={ref:items,len:items.length,map:m}}return paidCache.map}
-// update progres ke klien: tiap UPD_DAYS hari selama pengerjaan (1 pengingat per grup)
-const UPD_DAYS=7;
-function updInfo(p){
-  if(!p||phase(p)!=="proses")return null;
-  const g=groupOf(p).filter(x=>phase(x)==="proses");if(!g.length)return null;
-  if(!paidGroups()[p.grup||p.id])return null;   // belum bayar = belum dikerjakan, masih follow-up
-  const key=g.find(x=>x.id===(p.grup||p.id))||g[0];
-  const ds=[];g.forEach(x=>[x.progUpd,x.tglDp,x.tglLunas].forEach(v=>{v=String(v||"").slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(v))ds.push(v)}));
-  const last=ds.sort().pop()||String(key.created||"").slice(0,10);if(!last)return null;
-  const next=addDays(last,UPD_DAYS),pu=g.map(x=>String(x.progUpd||"").slice(0,10)).sort().pop()||"";
-  return {key:key.id,ids:g.map(x=>x.id),last,next,due:next<=TODAY,told:pu};
+// ---------- tahap per paket & cek progres harian ----------
+const PKP_PK=["PIP","PTL","CIP","CVL"],NOREK_PK=["PTO","CTO"],MACET_DAYS=7;
+const isPendirian=p=>/^Pendirian/i.test(p.layanan||"");
+// tahap yang berlaku untuk data ini (paket tanpa PKP / tanpa rekening bank melewati tahap itu)
+function stagesFor(p){
+  if(!p.layanan)return PROC.slice();
+  if(!isPendirian(p))return ["Waiting DP","Lunas","Serah Terima"];
+  const pk=PAKET_ALIAS[p.paket]||p.paket||"";
+  return PROC.filter(s=>!(s==="PKP"&&pk&&!PKP_PK.includes(pk))&&!(s==="Rekening Bank"&&NOREK_PK.includes(pk)));
 }
-function markUpd(id){
-  const p=items.find(x=>x.id===id);const u=updInfo(p);if(!u)return;
-  u.ids.forEach(i=>{const x=items.find(y=>y.id===i);if(!x)return;const np=Object.assign({},x,{progUpd:TODAY,updated:TODAY});delete np.status;persist(np)});
-  toast(`${p.perusahaan||p.nama}: progres sudah dikabari ✓`);
+const stageLabel=(p,t)=>t==="Waiting DP"&&(hasDp(p)||N(p.lunas)>0)?"Dikerjakan (DP masuk)":t;
+function progInfo(p){
+  if(!p||phase(p)!=="proses")return null;
+  if(!(hasDp(p)||N(p.lunas)>0||paidGroups()[p.grup||p.id]))return null;   // belum bayar = masih follow-up
+  const c=curStep(p),cur=c>=0?PROC[c]:"Waiting DP",seq=stagesFor(p);
+  const next=seq.find(t=>PROC.indexOf(t)>c&&!has(p,t))||"";
+  const since=String(p.tahapTgl||p.tglDp||p.tglLunas||p.created||"").slice(0,10),days=since?Math.max(0,-dd(since)):0;
+  return {cur,curL:stageLabel(p,cur),next,days,macet:days>=MACET_DAYS,asked:String(p.progUpd||"").slice(0,10)===TODAY,
+    payNext:next==="Lunas"&&pdOf(p)>0&&money(p).sisa>0,seq,pos:Math.max(1,seq.indexOf(cur)+1)};
+}
+function actToast(msg,label,fn){
+  let el=$("#actToast");if(!el){el=document.createElement("div");el.id="actToast";el.className="wa-next";document.body.appendChild(el)}
+  el.innerHTML=`<span>${esc(msg)}</span><button type="button" class="btn sm primary">${esc(label)}</button><button type="button" class="x" aria-label="Tutup">×</button>`;
+  const [b,x]=el.querySelectorAll("button");b.onclick=()=>{el.remove();fn()};x.onclick=()=>el.remove();
+  clearTimeout(actToast.t);actToast.t=setTimeout(()=>el.remove(),9000);
+}
+function progAnswer(id,ok){
+  const p=items.find(x=>x.id===id),g=progInfo(p);if(!g)return;
+  const np=Object.assign({},p,{progUpd:TODAY,updated:TODAY});delete np.status;
+  if(ok&&g.next){const st=tags(p).slice();if(!st.includes(g.next))st.push(g.next);np.statuses=st;np.tahapTgl=TODAY;if(g.next==="Serah Terima")np.selesai=TODAY}
+  persist(np);
+  if(ok&&g.next){if(waLink(p.wa))actToast(`${pName(p)}: lanjut ke ${g.next} ✓`,"Kabari klien",()=>openWaPick(p.id,g.next==="Serah Terima"?"SELESAI":"UPD"));else toast(`${pName(p)}: lanjut ke ${g.next} ✓`)}
+  else toast(`${pName(p)}: dicek lagi besok`);
+}
+// DP pertama masuk pada pendirian PT/CV -> otomatis ke tahap TTD Draft Akta; catat tanggal tiap tahap berubah
+function autoStage(p){
+  const old=items.find(x=>x.id===p.id);
+  const paidNow=hasDp(p)||N(p.lunas)>0,paidOld=!!old&&(hasDp(old)||N(old.lunas)>0);
+  if(paidNow&&!paidOld&&isPendirian(p)&&!["lose","spam","delete","selesai"].includes(phase(p))&&curStep(p)<1){
+    const st=(Array.isArray(p.statuses)?p.statuses:tags(p)).slice();["Waiting DP","TTD Draft Akta"].forEach(t=>{if(!st.includes(t))st.push(t)});p=Object.assign({},p,{statuses:st});
+  }
+  const c=curStep(p);if(c>=0&&(!old||curStep(old)!==c))p=Object.assign({},p,{tahapTgl:TODAY});
+  return p;
 }
 function fuState(p){
   if(isMember(p))return {active:false};
@@ -1972,7 +1999,7 @@ function autoLunas(p){
   if(!np.bankLunas&&typeof bankDefault==="function"){try{np.bankLunas=np.bankDp||bankDefault(np)}catch(e){}}
   np.priceDeal=money(np).net;payDateInv(np);return np;
 }
-async function persist(p){if(isAtasan()){toast(RO_MSG);throw new Error("READONLY")}p=autoLunas(p);enqueue("save",p.id,p)}
+async function persist(p){if(isAtasan()){toast(RO_MSG);throw new Error("READONLY")}p=autoStage(autoLunas(p));enqueue("save",p.id,p)}
 async function remove(id){if(isAtasan()){toast(RO_MSG);throw new Error("READONLY")}enqueue("del",id)}
 async function persistSettings(s){
   if(!navigator.onLine)throw new Error("OFFLINE");
@@ -2319,9 +2346,9 @@ function render(){
   const dpWait=actv.filter(p=>curStep(p)===0&&!hasDp(p)).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
   const overdue=actv.filter(p=>pdOf(p)&&money(p).sisa>0&&p.invDue&&p.invDue<TODAY).sort((a,b)=>a.invDue.localeCompare(b.invDue));
   const lqP=lqPending(B).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
-  const updL=[];{const seen=new Set(overdue.map(p=>p.grup||p.id));B.forEach(p=>{const u=updInfo(p);if(!u||!u.due||seen.has(u.key))return;seen.add(u.key);updL.push(items.find(x=>x.id===u.key)||p)});updL.sort((a,b)=>updInfo(a).next.localeCompare(updInfo(b).next))}
+  const updL=B.filter(p=>{const g=progInfo(p);return g&&!g.asked}).sort((a,b)=>progInfo(b).days-progInfo(a).days);
   renderToday({ib,due,dpWait,overdue,lqP,B,updL});
-  tgLists={fu:due,dp:dpWait,due:overdue,upd:updL};try{bulkCta()}catch(e){}
+  tgLists={fu:due,dp:dpWait,due:overdue};try{bulkCta()}catch(e){}
   const tgN=ib.length+due.length+dpWait.length+overdue.length+updL.length;
   $("#tgBadge").textContent=$("#tgBadgeS").textContent=tgN?(tgN>99?"99+":tgN):"";
 
@@ -2410,9 +2437,9 @@ document.addEventListener("click",async e=>{
   const lb=e.target.closest("[data-label]");if(lb){labelFilter=labelFilter===lb.dataset.label?"":lb.dataset.label;render();if(labelFilter)setView("list");return}
   const go=e.target.closest("[data-go]");if(go){if($("#moreDlg").open)$("#moreDlg").close();setView(go.dataset.go);return}
   const vw=e.target.closest(".bnav [data-view],.side [data-view]");if(vw){setView(vw.dataset.view);return}
-  if(isAtasan()&&e.target.closest("[data-fu],[data-upd],[data-fuch],[data-lq],[data-pay],[data-tog]")){toast(RO_MSG);return}
+  if(isAtasan()&&e.target.closest("[data-fu],[data-pgok],[data-pgno],[data-fuch],[data-lq],[data-pay],[data-tog]")){toast(RO_MSG);return}
   const fb=e.target.closest("[data-fu]");if(fb){markFu(fb.dataset.fu);return}
-  const ub=e.target.closest("[data-upd]");if(ub){markUpd(ub.dataset.upd);return}
+  const pg=e.target.closest("[data-pgok],[data-pgno]");if(pg){progAnswer(pg.dataset.pgok||pg.dataset.pgno,!!pg.dataset.pgok);return}
   const fc=e.target.closest("[data-fuch]");if(fc){chooseFu(fc.dataset.id,fc.dataset.fuch);return}
   const gb=e.target.closest("[data-grp]");if(gb){$("#q").value=gb.dataset.grp;tab="semua";render();setView("list");toast("Menampilkan semua PT dalam grup");return}
   const lq=e.target.closest("[data-lq]");if(lq){openLq(lq.dataset.id,lq.dataset.lq);return}
@@ -3638,7 +3665,7 @@ function renderHome(B,cnt){
   const segs=[["Prospek",P0,"var(--fl-1)","-1"],["Waiting DP",W,"var(--fl-2)","0"],["Dikerjakan",J,"var(--fl-3)",""],["Serah terima",S,"var(--fl-4)",""]],tot=Math.max(1,P0+W+J+S);
   $("#hmFlow").innerHTML=`<div class="stackb">${segs.map(x=>x[1]?`<i style="flex:${x[1]};background:${x[2]}" title="${x[0]}: ${x[1]}"></i>`:"").join("")||`<i style="flex:1;background:var(--line)"></i>`}</div>
     <div class="lg2">${segs.map(x=>`<button type="button" ${x[3]!==""?`data-step="${x[3]}"`:`data-go="alur"`}><i style="background:${x[2]}"></i>${x[0]}<b class="num">${x[1]}</b></button>`).join("")}</div>
-    <div class="hm-foot">${act.length} aktif · ${LO} lose${cur.fuq&&(cur.fuq.on+cur.fuq.late+cur.fuq.miss)?` · follow-up tepat waktu ${Math.round(cur.fuq.on/(cur.fuq.on+cur.fuq.late+cur.fuq.miss)*100)}%`:""}</div>`;
+    <div class="hm-foot">${act.length} aktif · ${LO} lose${(()=>{const m=B.filter(p=>{const g=progInfo(p);return g&&g.macet}).length;return m?` · <b style="color:var(--bad-ink)">${m} macet ≥ ${MACET_DAYS} hari</b>`:""})()}${cur.fuq&&(cur.fuq.on+cur.fuq.late+cur.fuq.miss)?` · follow-up tepat waktu ${Math.round(cur.fuq.on/(cur.fuq.on+cur.fuq.late+cur.fuq.miss)*100)}%`:""}</div>`;
   // performa PIC (admin/atasan) atau sumber lead (PIC)
   $("#hmPicSub").textContent=perLabel();
   if(isAdmin()&&!pc){
@@ -3664,10 +3691,10 @@ var lvN=40;const LV_STEP=40;var detId=null;
 function stTag(p){const ph=phase(p),c=curStep(p);
   if(ph==="selesai")return `<span class="tg ok">Selesai</span>`;
   if(ph==="lose")return `<span class="tg mut">Lose</span>`;if(ph==="spam")return `<span class="tg mut">Spam</span>`;if(ph==="delete")return `<span class="tg mut">Delete</span>`;
-  if(ph==="proses"&&c>=0){const t=PROC[c];return `<span class="tg ${/^Waiting/.test(t)?"dp":"fu"}">${esc(t)}</span>`}
+  if(ph==="proses"&&c>=0){const t=PROC[c],g=progInfo(p),lb=stageLabel(p,t);return `<span class="tg ${g&&g.macet?"late":/^Waiting/.test(lb)?"dp":"fu"}"${g&&g.macet?` title="Macet ${g.days} hari di tahap ini"`:""}>${esc(lb)}${g&&g.macet?" · "+g.days+" hr":""}</span>`}
   const s=fuState(p);return `<span class="tg fu">Prospek${s.active&&s.label&&!s.done?" · "+esc(s.label):""}</span>`}
 function stepsBar(p){const ph=phase(p);if(!["proses","selesai"].includes(ph))return "";const fin=ph==="selesai";
-  return `<span class="steps" aria-hidden="true">${PROC.map(t=>`<i class="${has(p,t)?(fin?"d":"f"):""}"></i>`).join("")}</span>`}
+  return `<span class="steps" aria-hidden="true">${stagesFor(p).map(t=>`<i class="${has(p,t)?(fin?"d":"f"):""}"></i>`).join("")}</span>`}
 function fuTag(p){const s=fuState(p);if(!s.active)return `<span class="mu">–</span>`;
   if(s.upcoming)return `<span class="tg mut">${esc(s.next)} · ${fmtD(s.nextDate)}</span>`;
   if(s.inbox)return `<span class="tg ib">Inbox</span>`;
@@ -3696,7 +3723,8 @@ function detHTML(p){
   const pills=[[p.layanan,p.paket].filter(Boolean).join(" · "),p.paketVo?"VO "+p.paketVo:"",[p.sumber,brandOf(p)].filter(x=>x&&x!=="–").join(" · "),p.invNo||"",o?"Order ke-"+(o.k+1):"",p.kualitas?"Lead "+p.kualitas.toLowerCase():""].filter(Boolean);
   h+=`<div class="dpills">${pills.map(x=>`<span class="tg mut">${esc(x)}</span>`).join("")}</div>`;
   if(["proses","selesai"].includes(ph)||c>=0){
-    h+=`<div class="dbox dstage"><div class="h"><span>Tahap ${Math.max(1,c+1)} dari ${PROC.length}</span><b>${esc(c>=0?PROC[c]:"Waiting DP")}</b></div><div class="bar8">${PROC.map(t=>`<button type="button" class="${has(p,t)?(ph==="selesai"?"d fin":"d"):""}" data-tog="${p.id}" data-tag="${esc(t)}" title="${esc(t)}" aria-label="${esc(t)} ${has(p,t)?"(sudah)":"(belum)"}" aria-pressed="${has(p,t)}"></button>`).join("")}</div>${isAtasan()?"":`<small class="dhint">Ketuk kotak untuk centang / batalkan tahap</small>`}</div>`;
+    const seq=stagesFor(p),curT=c>=0?PROC[c]:"Waiting DP",pos=Math.max(1,seq.indexOf(curT)+1),skip=PROC.filter(t=>!seq.includes(t)&&isPendirian(p));
+    h+=`<div class="dbox dstage"><div class="h"><span>Tahap ${pos} dari ${seq.length}</span><b>${esc(stageLabel(p,curT))}</b></div><div class="bar8">${seq.map(t=>`<button type="button" class="${has(p,t)?(ph==="selesai"?"d fin":"d"):""}" data-tog="${p.id}" data-tag="${esc(t)}" title="${esc(t)}" aria-label="${esc(t)} ${has(p,t)?"(sudah)":"(belum)"}" aria-pressed="${has(p,t)}"></button>`).join("")}</div>${skip.length?`<small class="dhint">Tidak termasuk paket ${esc(p.paket||"")}: ${esc(skip.join(", "))}</small>`:""}${isAtasan()?"":`<small class="dhint">Ketuk kotak untuk centang / batalkan tahap</small>`}</div>`;
   }else{
     const st=tags(p).filter(t=>!WEEKS.includes(t));
     h+=`<div class="dbox dstage"><div class="h"><span>Status</span><b>${esc(st.join(", ")||"Prospek")}</b></div></div>`;
@@ -3717,8 +3745,8 @@ function detHTML(p){
       return `<div class="fl fut"><span class="o"></span><span class="t">${esc(lb)}</span><small>${fmtD(d)}</small></div>`}).join("");
     h+=`<div class="dsec"><span>Follow-up</span>${s.choice==="promo"?`<small>promo: ${esc(promoText())}</small>`:""}</div><div class="dbox dfu">${rows}${s.inbox&&!isAtasan()?`<div class="fl-ch"><button class="btn sm" type="button" data-fuch="promo" data-id="${p.id}">Saran promosi 1</button><button class="btn sm primary" type="button" data-fuch="dp" data-id="${p.id}">Waiting DP</button></div>`:""}</div>`;
   }
-  const U=updInfo(p);
-  if(U){const d=dd(U.next),wl=waLink(p.wa);h+=`<div class="dsec"><span>Update progres ke klien</span></div><div class="dbox dupd"><div class="fl"><span class="o ${U.due?"now":"ok"}">${U.due?"":IC.ok}</span><span class="t">${U.due?`<b>Waktunya kabari klien</b> <small class="${d<0?"late-txt":"today-txt"}">${d<0?"telat "+(-d)+" hari":"hari ini"}</small>`:`Berikutnya ${fmtD(U.next)}`}<small style="display:block">Terakhir ${U.told?"dikabari":"bayar"} ${fmtD(U.last)}</small></span>${isAtasan()?"":`${wl?`<a class="btn sm fuwa" href="${wl}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="UPD">WA</a>`:""}<button type="button" class="btn sm${U.due?" primary":""}" data-upd="${p.id}">✓ Sudah dikabari</button>`}</div></div>`}
+  const G=progInfo(p);
+  if(G){const wl=waLink(p.wa);h+=`<div class="dsec"><span>Cek progres</span>${G.macet?`<small style="color:var(--bad-ink)">macet ${G.days} hari</small>`:""}</div><div class="dbox dupd"><div class="fl"><span class="o ${G.asked?"ok":"now"}">${G.asked?IC.ok:""}</span><span class="t">${G.asked?"Sudah dicek hari ini":`<b>Sudah lanjut ke ${esc(G.next||"tahap berikutnya")}?</b>`}<small style="display:block">${esc(G.curL)} · ${G.days} hari di tahap ini</small></span>${isAtasan()||G.asked?"":(G.payNext?`<button type="button" class="btn sm primary" data-pay="lunas" data-id="${p.id}">Catat pelunasan</button>`:G.next?`<button type="button" class="btn sm primary" data-pgok="${p.id}">✓ Lanjut</button>`:"")+`<button type="button" class="btn sm" data-pgno="${p.id}">Belum</button>`}</div>${wl&&!isAtasan()?`<div class="fl"><span class="o"></span><span class="t">Kabari klien soal progres</span><a class="btn sm fuwa" href="${wl}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="UPD">WA</a></div>`:""}</div>`}
   if(grp.length>1)h+=`<div class="dsec"><span>Grup ${grp.length} PT</span></div><div class="dbox dgrp">${grp.map(x=>`<div class="dg${x.id===p.id?" on":""}" data-det="${x.id}"><span><b>${esc(pName(x))}</b><small>${esc([x.layanan,x.paket].filter(Boolean).join(" · "))}</small></span>${stTag(x)}</div>`).join("")}</div>`;
   const kv=[["Masuk",p.created?fmtDY(p.created):""],["WhatsApp",fmtWa(p.wa)],["Email",p.email],["VO partner",p.vo],["Kab/kota",p.kota],["Alamat",p.alamat],["Tanggal DP",N(p.dp)?fmtDY(p.tglDp)+" · "+rpS(p.dp):""],["Pelunasan",N(p.lunas)?fmtDY(p.tglLunas)+" · "+rpS(p.lunas):""],["Jatuh tempo",p.invDue?fmtDY(p.invDue):""],["Kualitas lead",[p.kualitas,p.alasanQ].filter(Boolean).join(" · ")]].filter(x=>x[1]);
   if(kv.length)h+=`<div class="dsec"><span>Info</span></div><div class="dbox dkv">${kv.map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join("")}</div>`;
@@ -3823,17 +3851,14 @@ function renderToday({ib,due,dpWait,overdue,lqP,B,updL}){
     act:waLink(p.wa)?`<a class="wab" href="${waLink(p.wa)}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="INV" aria-label="Kirim proforma via WhatsApp">${WA_SVG}</a>`:""}));
   overdue.forEach(p=>rows.push({k:"due",p,late:true,ord:p.invDue,tag:`<span class="tg late">Tagihan · ${Math.abs(dd(p.invDue))} hari</span>`,sub:pSub(p,"sisa "+rpS(money(p).sisa)),
     act:waLink(p.wa)?`<a class="wab" href="${waLink(p.wa)}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="TAGIH" aria-label="Tagih via WhatsApp">${WA_SVG}</a>`:""}));
-  (updL||[]).forEach(p=>{const u=updInfo(p),d=dd(u.next),c=curStep(p);rows.push({k:"upd",p,late:d<0,ord:u.next,
-    tag:`<span class="tg ${d<0?"late":"upd"}">Update progres${d<0?" · "+(-d)+" hari":""}</span>`,sub:pSub(p,(c>=0?PROC[c]:"Waiting DP")+" · terakhir "+fmtD(u.last)),
-    lead:`<button type="button" class="ck" data-upd="${p.id}" aria-label="Tandai sudah dikabari" title="Tandai sudah dikabari"></button>`,
-    act:waLink(p.wa)?`<a class="wab" href="${waLink(p.wa)}" target="_blank" rel="noopener" data-wapick="${p.id}" data-wdef="UPD" aria-label="Kirim update progres via WhatsApp">${WA_SVG}</a>`:""})});
+  const cek=(updL||[]).map(p=>{const g=progInfo(p);return {k:"upd",p,g,sub:[p.nama&&p.perusahaan?p.nama:"",g.curL,g.days+" hari di tahap ini",isAdmin()?p.pic:""].filter(Boolean).join(" · ")}});
   const lq=lqP.map(p=>({k:"lq",p,sub:pSub(p,p.sumber+" · masuk "+fmtD(p.created))}));
-  const cnt={all:rows.length+lq.length,fu:rows.filter(r=>r.k==="fu").length,dp:rows.filter(r=>r.k==="dp").length,due:overdue.length,upd:rows.filter(r=>r.k==="upd").length,lq:lq.length};
+  const cnt={all:rows.length+lq.length+cek.length,fu:rows.filter(r=>r.k==="fu").length,dp:rows.filter(r=>r.k==="dp").length,due:overdue.length,upd:cek.length,lq:lq.length};
   if(cnt[tgChip]===0&&tgChip!=="all")tgChip="all";
-  $("#tgChips").innerHTML=[["all","Semua"],["fu","Follow-up"],["dp","Waiting DP"],["due","Tagihan"],["upd","Update progres"],["lq","Nilai lead"]].filter(([k])=>k==="all"||cnt[k]).map(([k,l])=>`<button type="button" class="chipb${tgChip===k?" on":""}" data-tgc="${k}" role="tab" aria-selected="${tgChip===k}">${l}<em>${cnt[k]}</em></button>`).join("");
+  $("#tgChips").innerHTML=[["all","Semua"],["fu","Follow-up"],["dp","Waiting DP"],["due","Tagihan"],["upd","Cek progres"],["lq","Nilai lead"]].filter(([k])=>k==="all"||cnt[k]).map(([k,l])=>`<button type="button" class="chipb${tgChip===k?" on":""}" data-tgc="${k}" role="tab" aria-selected="${tgChip===k}">${l}<em>${cnt[k]}</em></button>`).join("");
   // progres hari ini: follow-up yang dicentang hari ini
-  let doneT=0;const updT=new Set();B.forEach(p=>{Object.values(fuDoneMap(p)).forEach(v=>{if(String(v).slice(0,10)===TODAY)doneT++});if(String(p.progUpd||"").slice(0,10)===TODAY)updT.add(p.grup||p.id)});doneT+=updT.size;
-  const left=rows.length,lateN=rows.filter(r=>r.late).length,tot=doneT+left,pct=tot?Math.round(doneT/tot*100):100,C=2*Math.PI*15;
+  let doneT=0;const updT=new Set();B.forEach(p=>{Object.values(fuDoneMap(p)).forEach(v=>{if(String(v).slice(0,10)===TODAY)doneT++});if(String(p.progUpd||"").slice(0,10)===TODAY)updT.add(p.id)});doneT+=updT.size;
+  const left=rows.length+cek.length,lateN=rows.filter(r=>r.late).length,tot=doneT+left,pct=tot?Math.round(doneT/tot*100):100,C=2*Math.PI*15;
   $("#tgProg").innerHTML=`<svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--step-soft)" stroke-width="4.5"/><circle cx="18" cy="18" r="15" fill="none" stroke="var(--step)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="${(C*pct/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="currentColor">${pct}%</text></svg>
     <div><b>${left?`${doneT} dari ${tot} tugas beres`:"Semua tugas beres 🎉"}</b><small>${left?`${left} lagi${lateN?` · <span class="late-txt">${lateN} sudah telat</span>`:""}`:items.length?"Tidak ada follow-up, DP, atau tagihan yang menunggu.":"Belum ada data. Ketuk + untuk menambah prospek."}${lq.length?` · ${lq.length} lead belum dinilai`:""}</small></div>`;
   const show=r=>tgChip==="all"||r.k===tgChip;
@@ -3843,8 +3868,11 @@ function renderToday({ib,due,dpWait,overdue,lqP,B,updL}){
   const lqRow=r=>{const p=r.p;return `<div class="trow" data-det="${p.id}"><span class="ini ${iniCls(p)}">${esc(initials(p))}</span><div class="tx"><b>${esc(pName(p))}</b><small>${esc(r.sub)}</small></div><span class="lqb"><button class="btn sm" type="button" data-lq="Tidak Berkualitas" data-id="${p.id}">Tidak</button><button class="btn sm primary" type="button" data-lq="Berkualitas" data-id="${p.id}">Berkualitas</button></span></div>`};
   const sec=(t,arr,cls,fn)=>arr.length?`<div class="tsec ${cls||""}"><span>${t}</span><span>${arr.length}</span></div><div class="card tlist">${arr.map(fn||row).join("")}</div>`:"";
   const R=rows.filter(show),late=R.filter(r=>r.late).sort((a,b)=>String(a.ord).localeCompare(String(b.ord))),now=R.filter(r=>!r.late).sort((a,b)=>String(a.ord).localeCompare(String(b.ord)));
+  const cekRow=r=>{const p=r.p,g=r.g;return `<div class="trow" data-det="${p.id}"><span class="ini ${iniCls(p)}">${esc(initials(p))}</span><div class="tx"><b>${esc(pName(p))}</b><small>${esc(r.sub)}</small></div>${g.macet?`<span class="tg late">Macet ${g.days} hari</span>`:""}</div>
+    <div class="trow-sub"><button class="btn sm" type="button" data-pgno="${p.id}">Belum</button>${g.payNext?`<button class="btn sm primary" type="button" data-pay="lunas" data-id="${p.id}">Catat pelunasan</button>`:g.next?`<button class="btn sm primary" type="button" data-pgok="${p.id}">✓ Lanjut ke ${esc(g.next)}</button>`:""}</div>`};
+  const CK=tgChip==="all"||tgChip==="upd"?cek:[];
   const LQ=tgChip==="all"||tgChip==="lq"?lq:[],LQs=tgChip==="all"?LQ.slice(0,5):LQ.slice(0,60);
-  let h=sec("Telat",late,"r")+sec("Hari ini",now)+(LQ.length?sec("Lead iklan belum dinilai",LQs,"",lqRow)+(LQ.length>LQs.length?`<button type="button" class="more-lnk" data-tgc="lq">${tgChip==="all"?`Lihat semua ${LQ.length} lead →`:`+${LQ.length-LQs.length} lainnya`}</button>`:""):"");
+  let h=sec("Telat",late,"r")+sec("Hari ini",now)+sec("Cek progres · sudah lanjut tahap?",CK,"",cekRow)+(LQ.length?sec("Lead iklan belum dinilai",LQs,"",lqRow)+(LQ.length>LQs.length?`<button type="button" class="more-lnk" data-tgc="lq">${tgChip==="all"?`Lihat semua ${LQ.length} lead →`:`+${LQ.length-LQs.length} lainnya`}</button>`:""):"");
   $("#tgBody").innerHTML=h||`<div class="card tg-empty"><b>Tidak ada tugas di sini 👌</b><small>Follow-up, Waiting DP, dan tagihan yang jatuh tempo muncul otomatis.</small></div>`;
 }
 document.addEventListener("click",e=>{const c=e.target.closest("[data-tgc]");if(!c)return;tgChip=c.dataset.tgc;render();try{window.scrollTo({top:0,behavior:"smooth"})}catch(err){}});
@@ -3852,7 +3880,7 @@ document.addEventListener("click",e=>{const c=e.target.closest("[data-tgc]");if(
 // WhatsApp tidak bisa mengirim otomatis ke banyak nomor (kecuali WhatsApp Business API berbayar),
 // jadi chat dibuka satu per satu dengan pesan terisi; PIC tinggal tekan kirim lalu Lanjut.
 var tgLists={fu:[],dp:[],due:[]};
-var BULK_SEC=[["fu","Follow-up jatuh tempo"],["dp","Waiting DP, belum bayar"],["due","Tagihan lewat jatuh tempo"],["upd","Update progres ke klien"]];
+var BULK_SEC=[["fu","Follow-up jatuh tempo"],["dp","Waiting DP, belum bayar"],["due","Tagihan lewat jatuh tempo"]];
 function bulkCands(){
   const seen=new Set(),out=[];
   BULK_SEC.forEach(([kind])=>(tgLists[kind]||[]).forEach(p=>{
@@ -3907,7 +3935,6 @@ $("#bulkBar").addEventListener("click",e=>{
   if(a==="go"&&x){ // link dibiarkan terbuka (jangan preventDefault), lalu tandai & siapkan berikutnya
     const p=items.find(q=>q.id===x.id);
     if(p&&x.kind==="fu"){const s=fuState(p);if(s.label===x.k&&!s.done)try{markFu(p.id)}catch(err){}}
-    if(p&&x.kind==="upd"){const u=updInfo(p);if(u&&u.due)try{markUpd(p.id)}catch(err){}}
     bulk.sent++;
   }
   bulk.i++;bulkSave();setTimeout(bulkPaint,a==="go"?400:0);
