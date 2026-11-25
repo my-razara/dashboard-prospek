@@ -1071,6 +1071,7 @@ function vendWriteMonth_(v, ym, all, tz) {
   if (!total) return 0;
   if (L.hr + total > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), L.hr + total - sh.getMaxRows());
   const keys = Object.keys(c).filter(k => k !== 'no');
+  vendFitValidation_(sh, L.hr + 1, c, keys, rows);
   keys.forEach(k => {
     const vals = [];
     for (let i = 0; i < total; i++) vals.push([i < rows.length ? rows[i][k] : '']);
@@ -1083,6 +1084,34 @@ function vendWriteMonth_(v, ym, all, tz) {
   nos.forEach((r, i) => { if (!String(r[0]).trim()) { r[0] = i + 1; fix = true; } });
   if (fix) sh.getRange(L.hr + 1, c.no, total, 1).setValues(nos);
   return rows.length;
+}
+
+// Sesuaikan isi dengan dropdown (data validation) di sheet vendor supaya tidak ditolak.
+// Contoh: sheet Izinin tidak punya pilihan "Virtual Office" -> ditulis "Others" dan layanannya masuk Notes.
+function vendFitValidation_(sh, row, c, keys, rows) {
+  const allowed = {};
+  keys.forEach(k => {
+    try {
+      const dv = sh.getRange(row, c[k]).getDataValidation();
+      if (!dv) return;
+      const t = dv.getCriteriaType(), a = dv.getCriteriaValues();
+      if (t === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) allowed[k] = (a[0] || []).map(String);
+      else if (t === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE && a[0]) allowed[k] = a[0].getValues().reduce((x, r) => x.concat(r), []).map(String).filter(String);
+    } catch (e) {}
+  });
+  Object.keys(allowed).forEach(k => {
+    const list = allowed[k];
+    if (!list.length) return;
+    const other = list.find(x => /^(others?|lainnya|lain-lain)$/i.test(x.trim()));
+    rows.forEach(r => {
+      const v = r[k];
+      if (v === '' || v == null || v instanceof Date) return;
+      const hit = list.find(x => x.trim().toLowerCase() === String(v).trim().toLowerCase());
+      if (hit) { r[k] = hit; return; }
+      if (k === 'keb') { if (!r.notes) r.notes = String(v); r[k] = other || ''; }
+      else r[k] = other || '';
+    });
+  });
 }
 
 // keys: ["ads-lopo|2026-11", ...]
