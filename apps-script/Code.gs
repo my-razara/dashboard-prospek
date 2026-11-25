@@ -27,7 +27,7 @@ const FIELDS = [
   ['tglDp', 'Tanggal DP'], ['tglLunas', 'Tanggal Pelunasan'], ['bankDp', 'Bank DP'], ['bankLunas', 'Bank Pelunasan'], ['selesai', 'Tanggal Serah Terima'],
   ['nilai', 'Estimasi Nilai'], ['catatan', 'Catatan'],
   ['kualitas', 'Kualitas Lead'], ['alasanQ', 'Alasan Kualitas'], ['srcChat', 'Source Chat'], ['followup', 'Follow-up'],
-  ['fuDone', 'Follow-up Selesai'], ['fuChoice', 'Pilihan Inbox FU'],
+  ['fuDone', 'Follow-up Selesai'], ['fuChoice', 'Pilihan Inbox FU'], ['progUpd', 'Update Progres Terakhir'],
   ['invBrand', 'Brand Invoice'], ['invNo', 'No Invoice'], ['invDate', 'Tanggal Invoice'], ['invDue', 'Jatuh Tempo'],
   ['alamat', 'Alamat Klien'], ['email', 'Email Klien'], ['invItems', 'Rincian Invoice'], ['invNote', 'Catatan Invoice'],
   ['invRek', 'Rekening Invoice'], ['bulan', 'Bulan Rekap'], ['minggu', 'Minggu Ke'],
@@ -1077,6 +1077,7 @@ function vendorBackfillIzinin_() {
 const REM_APP_URL = 'https://my-razara.github.io/dashboard-prospek/';
 const REM_EMAIL_DEF = { eko: 'ekovorent@gmail.com', mayang: 'mayangvorent@gmail.com', deny: 'deny.echoffice@gmail.com' };
 const REM_FU_BASE = [['FU1', 2], ['FU2', 5], ['FU3', 10], ['FU4', 17]], REM_FU_DP = [['FU5', 21], ['FU6', 26]], REM_FU_PRM = [['PRM1', 30], ['PRM2', 37]];
+const REM_UPD_DAYS = 7;
 const REM_FU_LABELS = REM_FU_BASE.concat(REM_FU_DP, REM_FU_PRM).map(x => x[0]);
 
 function remHas_(p, t) { return (Array.isArray(p.statuses) ? p.statuses : String(p.statuses || '').split(',')).map(x => String(x).trim()).indexOf(t) >= 0; }
@@ -1140,7 +1141,13 @@ function remTasks_(items, pic, today) {
   const dp = act.filter(p => remStep_(p) === 0 && !remHasDp_(p)).sort((a, b) => String(a.created).localeCompare(String(b.created)));
   const due = act.filter(p => { const m = money_(p); return m.gross && m.sisa > 0 && p.invDue && String(p.invDue) < today; }).sort((a, b) => String(a.invDue).localeCompare(String(b.invDue)));
   const lq = mine.filter(p => ADS.map[String(p.sumber || '').trim()] && !(p.grup && p.grup !== p.id) && !p.kualitas && String(p.created || '') >= ADS.start && String(p.created || '') < today && !remHas_(p, 'Spam') && p.layanan !== 'Spam' && !remHas_(p, 'Delete'));
-  return { inbox: inbox, fu: fu, dp: dp, due: due, lq: lq };
+  // update progres ke klien: tiap 7 hari selama pengerjaan (1 per grup)
+  const lastOf = a => a.map(x => [x.progUpd, x.tglDp, x.tglLunas].map(v => adsIso_(v, 'Asia/Jakarta')).filter(Boolean)).reduce((m, l) => m.concat(l), []).sort().pop() || '';
+  const grp = {};
+  mine.filter(p => remPhase_(p) === 'proses').forEach(p => { (grp[p.grup || p.id] = grp[p.grup || p.id] || []).push(p); });
+  const upd = Object.keys(grp).map(k => { const a = grp[k], last = lastOf(a) || String(a[0].created || '').slice(0, 10); return { p: a.find(x => x.id === k) || a[0], last: last, next: remAddDays_(last, REM_UPD_DAYS) }; })
+    .filter(x => x.last && x.next <= today && !due.some(d => (d.grup || d.id) === (x.p.grup || x.p.id))).sort((a, b) => a.next.localeCompare(b.next));
+  return { inbox: inbox, fu: fu, dp: dp, due: due, lq: lq, upd: upd };
 }
 
 function remHtml_(pic, t, today) {
@@ -1163,7 +1170,7 @@ function remHtml_(pic, t, today) {
       + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px">' + list.slice(0, MAX).map(fn).join('') + '</table>'
       + (list.length > MAX ? '<div style="font-size:13px;color:#64748b;padding-top:8px">+' + (list.length - MAX) + ' lainnya, lihat di aplikasi</div>' : '') + '</td></tr>';
   };
-  const tiles = [['Inbox', t.inbox.length, '#4f46e5'], ['Follow-up', t.fu.length, '#d97706'], ['Waiting DP', t.dp.length, '#059669'], ['Tagihan telat', t.due.length, '#dc2626'], ['Lead belum dinilai', t.lq.length, '#0284c7']];
+  const tiles = [['Follow-up', t.fu.length + t.inbox.length, '#d97706'], ['Waiting DP', t.dp.length, '#059669'], ['Tagihan telat', t.due.length, '#dc2626'], ['Update progres', (t.upd || []).length, '#0891b2'], ['Lead belum dinilai', t.lq.length, '#0284c7']];
   const total = tiles.reduce((a, x) => a + x[1], 0);
   return '<!doctype html><html><body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif">'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 10px"><tr><td align="center">'
@@ -1179,6 +1186,7 @@ function remHtml_(pic, t, today) {
     + sec('Follow-up jatuh tempo', 'Kirim pesan follow-up, lalu tandai "Sudah" di aplikasi.', '#d97706', t.fu, x => { const d = remDays_(x.s.date, today); return row(x.p, pill(x.s.label, '#fef3c7', '#92400e') + ' <span style="font-size:12.5px;color:' + (d > 0 ? '#dc2626' : '#64748b') + '">' + (d > 0 ? d + ' hari lewat' : 'hari ini') + '</span>' + (x.s.missed.length ? ' <span style="font-size:12px;color:#b45309">· ' + e(x.s.missed.join(', ')) + ' terlewat</span>' : '')); })
     + sec('Waiting DP, belum bayar', 'Kirim invoice / ingatkan pembayaran DP.', '#059669', t.dp, p => { const m = money_(p); return row(p, (m.gross ? pill('Deal ' + rp(m.net), '#dcfce7', '#166534') : pill('Price deal belum diisi', '#f1f5f9', '#475569')) + ' <span style="font-size:12.5px;color:#64748b">masuk ' + fd(p.created) + '</span>'); })
     + sec('Tagihan lewat jatuh tempo', 'Ingatkan pelunasan ke klien.', '#dc2626', t.due, p => row(p, pill('Sisa ' + rp(money_(p).sisa), '#fee2e2', '#991b1b') + ' <span style="font-size:12.5px;color:#dc2626">jatuh tempo ' + fd(p.invDue) + '</span>'))
+    + sec('Update progres ke klien', 'Kabari klien sampai di tahap mana pengurusannya, lalu tandai "Sudah dikabari" di aplikasi.', '#0891b2', t.upd, x => { const c = remStep_(x.p); return row(x.p, pill(c >= 0 ? PROC[c] : 'Waiting DP', '#cffafe', '#155e75') + ' <span style="font-size:12.5px;color:#64748b">terakhir dikabari ' + fd(x.last) + '</span>'); })
     + sec('Lead iklan belum dinilai', 'Nilai Berkualitas / Tidak di menu Tugas hari ini (tidak wajib, untuk laporan vendor iklan).', '#0284c7', t.lq, p => row(p, pill(String(p.sumber || ''), '#e0f2fe', '#075985') + ' <span style="font-size:12.5px;color:#64748b">masuk ' + fd(p.created) + '</span>'))
     + '<tr><td align="center" style="padding:26px 24px 8px"><a href="' + REM_APP_URL + '" style="display:inline-block;padding:13px 26px;border-radius:12px;background:#4f46e5;color:#ffffff;font-weight:800;font-size:15px;text-decoration:none">Buka aplikasi Prospek</a></td></tr>'
     + '<tr><td style="padding:10px 24px 24px;text-align:center;font-size:12px;color:#94a3b8">Email otomatis setiap pagi dari aplikasi Monitoring Prospek. Tugas yang sudah dikerjakan di aplikasi tidak muncul lagi besok.</td></tr>'
@@ -1193,9 +1201,9 @@ function kirimPengingatPagi() {
     const to = emails[norm_(u.name)];
     if (!to) { out.push(u.name + ': email belum diisi'); return; }
     const t = remTasks_(items, u.name, today);
-    const n = t.inbox.length + t.fu.length + t.dp.length + t.due.length + t.lq.length;
+    const n = t.inbox.length + t.fu.length + t.dp.length + t.due.length + t.lq.length + t.upd.length;
     if (!n) { out.push(u.name + ': tidak ada tugas, email tidak dikirim'); return; }
-    const parts = [[t.fu.length, 'follow-up'], [t.inbox.length, 'inbox'], [t.dp.length, 'waiting DP'], [t.due.length, 'tagihan telat'], [t.lq.length, 'lead belum dinilai']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]);
+    const parts = [[t.fu.length, 'follow-up'], [t.inbox.length, 'inbox'], [t.dp.length, 'waiting DP'], [t.due.length, 'tagihan telat'], [t.upd.length, 'update progres'], [t.lq.length, 'lead belum dinilai']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]);
     try {
       MailApp.sendEmail({ to: to, subject: 'Tugas hari ini, ' + u.name + ': ' + parts.join(', '), htmlBody: remHtml_(u.name, t, today), name: 'Monitoring Prospek' });
       out.push(u.name + ': terkirim ke ' + to + ' (' + n + ' tugas)');
