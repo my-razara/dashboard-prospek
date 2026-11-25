@@ -177,6 +177,9 @@ function route_(q) {
     case 'userUnlock': return userUnlock(q.token, q.name);
     case 'userSetActive': return userSetActive(q.token, q.name, q.active);
     case 'userDelete': return userDelete(q.token, q.name, q.moveTo);
+    case 'userSetFin': return userSetFin(q.token, q.name, q.fin, q.finPt);
+    case 'finWho': return finWho(q.token);
+    case 'finPayments': return finPayments(q.token, q.from);
   }
   throw new Error('UNKNOWN');
 }
@@ -414,7 +417,7 @@ function payload_(ss, u) {
   const all = u.role === 'admin' || u.role === 'atasan';
   if (!all) items = items.filter(o => norm_(o.pic) === norm_(u.name));
   return {
-    user: { name: u.name, role: u.role, sheetUrl: u.role === 'admin' ? ss.getUrl() : '', salesUrl: all ? salesUrl_() : '' },
+    user: { name: u.name, role: u.role, fin: u.fin || '', finPt: u.finPt || '', sheetUrl: u.role === 'admin' ? ss.getUrl() : '', salesUrl: all ? salesUrl_() : '' },
     items: items,
     settings: readSettings_(ss),
     budget: all ? readBudget_(ss) : [],
@@ -497,7 +500,7 @@ function nextInvNo_(sh, o, brands, tz) {
 function readUsers_(ss) {
   const sh = ss.getSheetByName(SHEET_USER);
   if (!sh || sh.getLastRow() < 2) return [];
-  const nc = Math.max(3, Math.min(5, sh.getLastColumn()));
+  const nc = Math.max(3, Math.min(7, sh.getLastColumn()));
   return sh.getRange(2, 1, sh.getLastRow() - 1, nc).getValues()
     .map((r, i) => ({ r: r, row: i + 2 }))
     .filter(x => String(x.r[0]).trim())
@@ -507,6 +510,9 @@ function readUsers_(ss) {
       role: norm_(x.r[2]) === 'admin' ? 'admin' : (norm_(x.r[2]) === 'atasan' ? 'atasan' : 'pic'),
       email: String(x.r[3] == null ? '' : x.r[3]).trim(),
       active: norm_(x.r[4]) !== 'nonaktif',
+      // akses aplikasi Finance: admin selalu kelola; lainnya dari kolom "Akses Finance" (kelola / lihat / kosong)
+      fin: norm_(x.r[2]) === 'admin' ? 'kelola' : (['kelola', 'lihat'].indexOf(norm_(x.r[5])) >= 0 ? norm_(x.r[5]) : ''),
+      finPt: norm_(x.r[2]) === 'admin' ? '' : String(x.r[6] == null ? '' : x.r[6]).trim(),
       row: x.row
     }));
 }
@@ -1421,7 +1427,7 @@ function setupAtasan() {
 }
 
 /* ---------------- Kelola pengguna (khusus admin, dari Pengaturan → Pengguna) ---------------- */
-const USER_HEAD = ['Nama', 'PIN', 'Peran (admin / atasan / pic)', 'Email', 'Status'];
+const USER_HEAD = ['Nama', 'PIN', 'Peran (admin / atasan / pic)', 'Email', 'Status', 'Akses Finance (kelola / lihat)', 'PT Finance (kosong = semua)'];
 
 function adminOnly_(token) {
   const u = auth_(token);
@@ -1476,7 +1482,7 @@ function usersList(token) {
   items.forEach(o => { const k = norm_(o.pic); if (k) cnt[k] = (cnt[k] || 0) + 1; });
   return readUsers_(ss).map(u => {
     const until = Number(cache.get('L_' + norm_(u.name)) || 0);
-    return { name: u.name, role: u.role, email: u.email, active: u.active, hasPin: !!u.pin, data: cnt[norm_(u.name)] || 0,
+    return { name: u.name, role: u.role, email: u.email, active: u.active, fin: u.fin, finPt: u.finPt, hasPin: !!u.pin, data: cnt[norm_(u.name)] || 0,
       locked: until > now ? Math.ceil((until - now) / 60000) : 0 };
   });
 }
@@ -1569,4 +1575,40 @@ function logoutAll_(name) {
     if (k.indexOf('T_') !== 0) return;
     try { if (norm_(JSON.parse(all[k]).n) === norm_(name)) props.deleteProperty(k); } catch (e) {}
   });
+}
+
+/* ---------------- Untuk aplikasi Finance ---------------- */
+// Aplikasi Finance (repo & spreadsheet terpisah) memakai login yang sama.
+// Server Finance memanggil finWho dengan token pengguna untuk memastikan siapa dia & aksesnya.
+function finWho(token) {
+  const u = auth_(token);
+  if (!u.fin) throw new Error('NOFIN');
+  return { name: u.name, role: u.role, fin: u.fin, finPt: u.finPt || '' };
+}
+
+// Pembayaran klien (DP & pelunasan) dari data Prospek, untuk dicocokkan dengan mutasi bank di Finance
+function finPayments(token, from) {
+  const u = auth_(token);
+  if (!u.fin) throw new Error('NOFIN');
+  const since = /^\d{4}-\d{2}-\d{2}$/.test(String(from || '')) ? String(from) : '2000-01-01';
+  const out = [];
+  readAll_(ss_()).forEach(p => {
+    if (!p.id) return;
+    const st = String(p.statuses || '').split(',').map(x => x.trim());
+    if (st.indexOf('Delete') >= 0 || st.indexOf('Spam') >= 0) return;
+    const base = { id: p.id, klien: p.perusahaan || p.nama || '', nama: p.nama || '', pic: p.pic || '', brand: p.brand || '', invBrand: p.invBrand || '', layanan: p.layanan || '', paket: p.paket || '', invNo: p.invNo || '' };
+    const d1 = String(p.tglDp || '').slice(0, 10), d2 = String(p.tglLunas || '').slice(0, 10);
+    if ((Number(p.dp) || 0) > 0 && d1 >= since) out.push(Object.assign({ ref: p.id + ':dp', jenis: 'DP', tgl: d1, nominal: Number(p.dp) || 0, bank: p.bankDp || '' }, base));
+    if ((Number(p.lunas) || 0) > 0 && d2 >= since) out.push(Object.assign({ ref: p.id + ':lunas', jenis: 'Pelunasan', tgl: d2, nominal: Number(p.lunas) || 0, bank: p.bankLunas || p.bankDp || '' }, base));
+  });
+  return out.sort((a, b) => b.tgl.localeCompare(a.tgl));
+}
+
+function userSetFin(token, name, fin, finPt) {
+  adminOnly_(token);
+  const ss = ss_(), u = userFind_(ss, name);
+  if (u.role === 'admin') throw new Error('Admin selalu punya akses Finance penuh');
+  const v = ['kelola', 'lihat'].indexOf(fin) >= 0 ? fin : '';
+  userSheet_(ss).getRange(u.row, 6, 1, 2).setNumberFormat('@').setValues([[v, v ? String(finPt || '').trim() : '']]);
+  return true;
 }

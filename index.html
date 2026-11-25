@@ -1229,6 +1229,23 @@ dialog.usrdlg{width:min(720px,96vw)}
   .usr-row{flex-wrap:wrap}
   .usr-a{max-width:none;width:100%;justify-content:flex-start;padding-left:50px}
 }
+.usr-fin{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.usr-fin select{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 10px;font-size:13px;color:var(--ink);max-width:100%}
+.usr-fin select[hidden]{display:none}
+/* ganti mode Prospek / Finance */
+.mode-sw{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:3px;margin:4px 0 10px}
+.mode-sw[hidden]{display:none}
+.mode-sw>*{flex:1;text-align:center;padding:8px 6px;border-radius:9px;font-size:13.5px;font-weight:650;color:var(--ink-2);text-decoration:none}
+.mode-sw .on{background:var(--panel);color:#3B47D9;box-shadow:0 1px 3px rgba(15,23,42,.1)}
+.mode-sw a:hover{color:var(--ink)}
+.mode-card{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.mode-card[hidden]{display:none}
+.mode-card .mc{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);text-decoration:none;position:relative}
+.mode-card .mc.on{border-color:#3B47D9;background:color-mix(in srgb,#3B47D9 7%,var(--panel))}
+.mode-card .mc i{font-style:normal;display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#3B47D9;color:#fff;font-weight:800;flex:none}
+.mode-card .mc i.f{background:#0E9F6E}
+.mode-card .mc b{display:block;font-size:14px}.mode-card .mc small{display:block;font-size:11.5px;color:var(--ink-3);line-height:1.3}
+.mode-card .mc em{position:absolute;top:6px;right:9px;font-style:normal;color:#3B47D9;font-weight:800;font-size:12px}
 /* ===/V2=== */
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1237,6 +1254,7 @@ dialog.usrdlg{width:min(720px,96vw)}
 <div class="shell">
 <aside class="side" aria-label="Menu utama">
   <div class="side-brand"><span class="side-logo app-logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
+  <div class="mode-sw" data-finonly hidden><span class="on">Prospek</span><a href="#" data-fin-go>Finance</a></div>
   <button class="btn primary side-add" type="button" data-proxy="#addBtn">+ Tambah prospek</button>
   <nav class="side-nav">
     <div class="side-h">Menu</div>
@@ -1436,6 +1454,7 @@ dialog.usrdlg{width:min(720px,96vw)}
 </dialog>
 <dialog id="moreDlg" class="sheet" aria-label="Menu">
   <div class="sheet-in">
+    <div class="mode-card" data-finonly hidden><span class="mc on"><i>P</i><span><b>Prospek</b><small>Klien, follow-up, invoice</small></span><em>✓</em></span><a class="mc" href="#" data-fin-go><i class="f">F</i><span><b>Finance</b><small>Kas, transaksi, pajak</small></span></a></div>
     <div class="sheet-who">Masuk sebagai <b id="whoName2"></b></div>
     <div id="syncTxt2" class="sheet-sync"></div>
     <button type="button" class="sheet-item" data-go="alur">Alur pengerjaan</button>
@@ -2042,8 +2061,11 @@ function loadData(d){
   items=applyQueue(serverItems);saveLocal();applyRole();applySettings();render();
   try{bulkPaint()}catch(e){}
 }
+const FIN_URL=(window.APP_CONFIG&&APP_CONFIG.FIN_URL)||location.origin+"/dashboard-finance/";
 function applyRole(){
   const a=isAdmin();
+  document.querySelectorAll("[data-finonly]").forEach(el=>el.hidden=!(user&&user.fin));
+  document.querySelectorAll("[data-fin-go]").forEach(el=>el.href=FIN_URL);
   if(!ls.get("pm_view",null))setView(a?"home":"tugas");
   const o=isOwner();document.body.classList.toggle("ro",isAtasan());
   $("#boss").hidden=!isAtasan();
@@ -2099,6 +2121,7 @@ $("#loginFrm").addEventListener("submit",async e=>{
     if(!owner||norm(owner.name)!==norm(d.user.name)){queue=[];ls.del(K.q)}
     ls.set(LAST_NAME,d.user.name);
     token=d.token;ls.set(K.tok,token);loadData(d);$("#login").hidden=true;toast("Halo, "+d.user.name);sync();
+    if(new URLSearchParams(location.search).get("ke")==="finance"&&d.user.fin){location.replace(FIN_URL);return}
   }catch(err){const c=String(err.code||""),k=c.split(":")[0],x=+c.split(":")[1]||0;
     $("#lPin").value="";
     if(k==="LOCK")lockLogin(x||15);
@@ -3783,7 +3806,8 @@ function usrPaint(){
     const p={id:u.name,nama:u.name};
     return `<div class="usr-row${u.active?"":" off"}"><span class="ini ${iniCls(p)}">${esc(initials(p))}</span>
       <div class="usr-m"><b>${esc(u.name)}${self?` <small>(kamu)</small>`:""}</b><small>${esc(u.email||"email belum diisi")}</small>
-        <span class="usr-tags"><span class="tg ${u.role==="admin"?"fu":u.role==="atasan"?"dp":"mut"}">${ROLE_L[u.role]||u.role}</span>${u.active?"":`<span class="tg late">Nonaktif</span>`}${u.locked?`<span class="tg dp">Terkunci ${u.locked} mnt</span>`:""}${u.data?`<span class="tg mut">${u.data} data</span>`:""}</span></div>
+        <span class="usr-tags"><span class="tg ${u.role==="admin"?"fu":u.role==="atasan"?"dp":"mut"}">${ROLE_L[u.role]||u.role}</span>${u.active?"":`<span class="tg late">Nonaktif</span>`}${u.locked?`<span class="tg dp">Terkunci ${u.locked} mnt</span>`:""}${u.data?`<span class="tg mut">${u.data} data</span>`:""}${u.fin?`<span class="tg ok">Finance: ${u.fin==="kelola"?"Kelola":"Lihat"}${u.finPt?" · "+esc(u.finPt):""}</span>`:""}</span>
+        ${u.role==="admin"||!u.active?"":`<span class="usr-fin"><select data-fin="${esc(u.name)}" aria-label="Akses Finance ${esc(u.name)}"><option value=""${u.fin?"":" selected"}>Tanpa Finance</option><option value="lihat"${u.fin==="lihat"?" selected":""}>Finance: lihat saja</option><option value="kelola"${u.fin==="kelola"?" selected":""}>Finance: kelola</option></select><select data-finpt="${esc(u.name)}" aria-label="PT Finance ${esc(u.name)}"${u.fin?"":" hidden"}><option value="">Semua PT</option>${(settings.brands||[]).map(b=>`<option${norm(b)===norm(u.finPt)?" selected":""}>${esc(b)}</option>`).join("")}</select></span>`}</div>
       <div class="usr-a">${u.locked?`<button type="button" class="btn sm" data-ua="unlock" data-n="${esc(u.name)}">Buka kunci</button>`:""}<button type="button" class="btn sm" data-ua="reset" data-n="${esc(u.name)}">Reset PIN</button>${self?"":`<button type="button" class="btn sm" data-ua="${u.active?"off":"on"}" data-n="${esc(u.name)}">${u.active?"Nonaktifkan":"Aktifkan"}</button><button type="button" class="btn sm danger" data-ua="del" data-n="${esc(u.name)}">Hapus</button>`}</div></div>`}).join("");
 }
 function usrShowPin(r,kind){
@@ -3806,6 +3830,13 @@ $("#usrAdd").addEventListener("submit",async e=>{
   finally{b.disabled=false;b.textContent="Tambah"}
 });
 let udName="";
+$("#usrList").addEventListener("change",async e=>{
+  const sl=e.target.closest("[data-fin],[data-finpt]");if(!sl)return;const n=sl.dataset.fin||sl.dataset.finpt,row=sl.closest(".usr-fin");
+  const fin=row.querySelector("[data-fin]").value,pt=row.querySelector("[data-finpt]").value;$("#usrErr").textContent="";
+  row.querySelectorAll("select").forEach(x=>x.disabled=true);
+  try{await call("userSetFin",{name:n,fin,finPt:fin?pt:""});toast(fin?`${n}: akses Finance ${fin==="kelola"?"kelola":"lihat saja"}${pt?" ("+pt+")":""}`:`${n}: akses Finance dicabut`);await usrLoad()}
+  catch(err){$("#usrErr").textContent=err.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy.":(err.message||"Gagal menyimpan.");row.querySelectorAll("select").forEach(x=>x.disabled=false)}
+});
 $("#usrList").addEventListener("click",async e=>{
   const b=e.target.closest("[data-ua]");if(!b)return;const a=b.dataset.ua,n=b.dataset.n;$("#usrErr").textContent="";
   if(a==="del"){udName=n;const u=usrData.find(x=>x.name===n)||{};

@@ -1,9 +1,10 @@
 {
+  "id": "/dashboard-prospek/",
   "name": "Monitoring Prospek & Pengerjaan",
   "short_name": "Prospek",
   "description": "Monitoring prospek dan proses pengerjaan klien",
   "start_url": "./",
-  "scope": "./",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#F4F5F8",

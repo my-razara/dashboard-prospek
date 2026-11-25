@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali file aplikasi di-update.
-const CACHE = "prospek-v66";
+const CACHE = "prospek-v67";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png"];
 const FONT_CACHE = "prospek-fonts";
@@ -10,7 +10,7 @@ self.addEventListener("install", e => {
 
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(
-    keys.filter(k => k !== CACHE && k !== FONT_CACHE).map(k => caches.delete(k))
+    keys.filter(k => k.indexOf("prospek-") === 0 && k !== CACHE && k !== FONT_CACHE).map(k => caches.delete(k))
   )).then(() => self.clients.claim()));
 });
 
@@ -19,7 +19,8 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return; // request ke API (POST) tidak disentuh
   const url = new URL(req.url);
 
-  if (url.origin === location.origin) {
+  // hanya file aplikasi ini (aplikasi Finance di domain yang sama punya cache sendiri)
+  if (url.origin === location.origin && url.pathname.indexOf(new URL(self.registration.scope).pathname) === 0) {
     // tampilkan dari cache (instan & offline), perbarui cache di belakang layar
     e.respondWith(caches.open(CACHE).then(async c => {
       const key = req.mode === "navigate" ? "./index.html" : req;
