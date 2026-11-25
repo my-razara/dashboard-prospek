@@ -3204,18 +3204,18 @@ function budRead(){return [...document.querySelectorAll("#budRows tr")].map(r=>{
 
 // ---------- Chat vs Conversion Google Ads (admin) ----------
 const ADS_SRC={"ads-lopo":0,"ads-gusti":1,"ads-echo":2},ADS_BR=["Vorent","Izinin","Echoffice"];
-let adsData=null,adsAt=0,adsBusy=false,adsErrTxt="";
+let adsData=null,adsAt=0,adsBusy=false,adsErrTxt="",adsFailAt=0;
 async function loadAds(force){
   if(!isAdmin()||adsBusy||!API||!navigator.onLine)return;
   if(!force&&adsData&&Date.now()-adsAt<600000)return;
   adsBusy=true;
   try{adsData=await call("adsStats");adsAt=Date.now();adsErrTxt="";try{fillPeriodOpts()}catch(e){}}
-  catch(e){adsErrTxt=e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy.":/permission|access|izin|openById/i.test(e.message||"")?"Server belum punya izin buka spreadsheet Google Ads. Jalankan setupGoogleAds sekali di Apps Script.":(e.message||"Gagal memuat data Google Ads.")}
+  catch(e){adsFailAt=Date.now();adsErrTxt=e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy.":/permission|access|izin|openById/i.test(e.message||"")?"Server belum punya izin buka spreadsheet Google Ads. Jalankan setupGoogleAds sekali di Apps Script.":(e.message||"Gagal memuat data Google Ads.")}
   finally{adsBusy=false;renderAds()}
 }
 function renderAds(){
   const card=$("#adsCard");if(!card)return;card.hidden=!isAdmin();if(!isAdmin())return;
-  if(!adsData){$("#adsBody").innerHTML=adsErrTxt?`<p class="ads-err">${esc(adsErrTxt)}</p>`:`<p class="co">Memuat data Google Ads…</p>`;loadAds();return}
+  if(!adsData){$("#adsBody").innerHTML=adsErrTxt?`<p class="ads-err">${esc(adsErrTxt)}</p>`:`<p class="co">Memuat data Google Ads…</p>`;if(!adsErrTxt||Date.now()-adsFailAt>120000)loadAds();return}  // kalau gagal, coba lagi paling cepat 2 menit sekali
   const start=adsData.start||"2026-11-01";
   // chat dari aplikasi (sejak tanggal mulai), 1 grup = 1 chat
   const appChat={};items.forEach(p=>{const b=ADS_SRC[p.sumber];if(b==null)return;const d=String(p.created||"").slice(0,10);if(d<start)return;const k=d+"|"+b;(appChat[k]=appChat[k]||new Set()).add(leadKey(p))});
