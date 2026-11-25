@@ -1689,7 +1689,7 @@ dialog.usrdlg{width:min(720px,96vw)}
     <label class="lf" for="lNameTxt">Nama</label>
     <span class="lin"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><input id="lNameTxt" autocomplete="username" autocapitalize="words" spellcheck="false" placeholder="Nama kamu"></span>
     <label class="lf" for="lPin">PIN</label>
-    <span class="pinbox" id="pinBox"><span class="pinv" id="pinV" aria-hidden="true"></span><input id="lPin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="12" aria-label="PIN"></span>
+    <span class="pinbox" id="pinBox"><span class="pinv" id="pinV" aria-hidden="true"></span><input id="lPin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="6" aria-label="PIN 6 angka"></span>
     <div class="lmsg" id="loginErr" role="alert"></div>
     <button class="btn primary lbtn" type="submit" id="lBtn">Masuk</button>
     <div class="lsmall"><span>Nama diingat di perangkat ini</span><span>Lupa PIN? <b>Hubungi admin</b></span></div>
@@ -2038,15 +2038,15 @@ const nameVal=()=>$("#lNameTxt").value.trim().replace(/\s+/g," ");
 const LAST_NAME="pm_lastname";
 function fillNames(sel){const t=$("#lNameTxt");t.value=sel||ls.get(LAST_NAME,"")||t.value||""}
 // PIN tampil sebagai kotak titik (minimal 6 kotak)
-function pinPaint(){const v=$("#lPin").value,n=Math.max(6,v.length+(v.length>=6&&v.length<12?1:0)),f=document.activeElement===$("#lPin");
+function pinPaint(){const v=$("#lPin").value,n=6,f=document.activeElement===$("#lPin");
   $("#pinV").innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<v.length?"f":""}${f&&i===Math.min(v.length,n-1)?" cur":""}">${i<v.length?"•":""}</i>`).join("");
-  if(!loginLock)$("#lBtn").disabled=v.length<4||!nameVal()}
+  if(!loginLock)$("#lBtn").disabled=v.length!==6||!nameVal()}
 let loginLock=0,loginLockT=null;
 function loginMsg(kind,html){const m=$("#loginErr");m.className="lmsg"+(kind?" "+kind:"");m.innerHTML=html||"";$("#pinBox").classList.toggle("err",kind==="e")}
 function lockLogin(min){loginLock=Date.now()+min*60000;$("#lBtn").disabled=true;clearTimeout(loginLockT);
   const tick=()=>{const left=Math.ceil((loginLock-Date.now())/60000);if(left<=0){loginLock=0;loginMsg("","");pinPaint();return}
     loginMsg("l",`<b>Terlalu banyak percobaan.</b> Nama ini dikunci sementara. Coba lagi dalam ${left} menit, atau hubungi admin.`);loginLockT=setTimeout(tick,20000)};tick()}
-$("#lPin").addEventListener("input",()=>{const v=$("#lPin").value.replace(/\D/g,"");if(v!==$("#lPin").value)$("#lPin").value=v;if($("#loginErr").classList.contains("e"))loginMsg("","");pinPaint()});
+$("#lPin").addEventListener("input",()=>{const v=$("#lPin").value.replace(/\D/g,"").slice(0,6);if(v!==$("#lPin").value)$("#lPin").value=v;if($("#loginErr").classList.contains("e"))loginMsg("","");pinPaint()});
 ["focus","blur"].forEach(ev=>$("#lPin").addEventListener(ev,pinPaint));
 $("#lNameTxt").addEventListener("input",()=>{if(loginLock){loginLock=0;clearTimeout(loginLockT);loginMsg("","")}pinPaint()});
 $("#pinBox").addEventListener("click",()=>$("#lPin").focus());
@@ -2063,6 +2063,7 @@ $("#loginFrm").addEventListener("submit",async e=>{
   e.preventDefault();const n=nameVal(),pin=$("#lPin").value.trim();
   if(loginLock>Date.now())return;
   if(!n||!pin){loginMsg("e","Isi nama dan PIN dulu.");return}
+  if(!/^\d{6}$/.test(pin)){loginMsg("e","PIN harus 6 angka.");return}
   if(!navigator.onLine){loginMsg("e","Masuk pertama kali butuh koneksi internet.");return}
   const b=$("#lBtn");b.disabled=true;b.textContent="Memeriksa…";loginMsg("","");
   try{
