@@ -2126,6 +2126,7 @@ function applyRole(){
   const a=isAdmin();
   setTimeout(hubAuto,0);
   document.querySelectorAll("[data-finonly]").forEach(el=>el.hidden=!(user&&user.fin));
+  if(user&&user.fin&&!document.getElementById("finPre")){const l=document.createElement("link");l.id="finPre";l.rel="prefetch";l.href=FIN_URL;document.head.appendChild(l)} // siapkan halaman Finance lebih awal
   document.querySelectorAll("[data-fin-go]").forEach(el=>el.href=FIN_URL);
   if(!ls.get("pm_view",null))setView(a?"home":"tugas");
   const o=isOwner();document.body.classList.toggle("ro",isAtasan());
