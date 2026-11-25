@@ -996,6 +996,60 @@ body.ro .dact[data-pay]{display:none!important}
 }
 body.fopen .lv .filters{z-index:62}
 @media (max-width:767px){body.fopen .fbox{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
+/* ================= UI v2: login & logo ================= */
+.app-logo{display:grid!important;place-items:center;background:linear-gradient(150deg,#4653E6,#2F3AC4)!important;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.app-logo svg{display:block}
+@media (min-width:768px){.side-logo.app-logo{width:38px;height:38px;border-radius:11px}}
+.login{display:grid!important;grid-template-columns:1fr;place-items:stretch;padding:0;overflow:auto;background:var(--bg)}
+.login[hidden]{display:none!important}
+.lg-side{display:none}
+.lg-main{display:flex;justify-content:center;align-items:flex-start;padding:calc(28px + env(safe-area-inset-top,0px)) 22px calc(28px + env(safe-area-inset-bottom,0px))}
+.login form{background:none;border:0;box-shadow:none;padding:0;width:min(420px,100%);gap:0}
+.lg-hero{text-align:center;margin-bottom:26px}
+.lg-hero .app-logo{width:66px;height:66px;border-radius:20px;margin:0 auto 14px;box-shadow:0 12px 26px rgba(59,71,217,.32),inset 0 1px 0 rgba(255,255,255,.18)}
+.lg-hero h1{margin:0;font-size:25px;font-weight:780;letter-spacing:-.025em}
+.lg-hero p{margin:5px 0 0;color:var(--ink-3);font-size:14px}
+.lg-head{display:none}
+.lf{display:block!important;font-size:13px!important;font-weight:650!important;color:var(--ink-2)!important;margin:0 2px 7px}
+.lin{display:flex;align-items:center;gap:10px;height:54px;border-radius:15px;background:var(--panel);border:1.5px solid var(--line);padding:0 16px;color:var(--ink-3);margin-bottom:16px}
+.lin:focus-within{border-color:var(--step);box-shadow:0 0 0 4px color-mix(in srgb,var(--step) 14%,transparent)}
+.login .lin input{border:0;background:none;padding:0;height:100%;flex:1;min-width:0;font-size:16.5px;color:var(--ink);outline:none;border-radius:0}
+.pinbox{position:relative;display:block;margin-bottom:14px;cursor:text}
+.pinv{display:flex;gap:9px}
+.pinv i{flex:1;height:56px;border-radius:15px;border:1.5px solid var(--line);background:var(--panel);display:grid;place-items:center;font-style:normal;font-size:26px;line-height:1;color:var(--ink);min-width:0}
+.pinv i.f{border-color:color-mix(in srgb,var(--step) 30%,var(--line))}
+.pinv i.cur{border-color:var(--step);box-shadow:0 0 0 4px color-mix(in srgb,var(--step) 14%,transparent)}
+.pinbox.err .pinv i{border-color:color-mix(in srgb,var(--lost) 45%,var(--line));background:color-mix(in srgb,var(--lost) 5%,var(--panel))}
+.login .pinbox input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;font-size:16px;caret-color:transparent;color:transparent;background:none}
+.lmsg{font-size:13.5px;line-height:1.45;border-radius:13px;margin-bottom:14px}
+.lmsg:empty{display:none}
+.lmsg.e{background:var(--lost-soft);color:var(--bad-ink);padding:11px 13px}
+.lmsg.l{background:var(--amber-soft);color:var(--warn-ink);padding:11px 13px}
+.lmsg:not(.e):not(.l){color:var(--bad-ink)}
+.lbtn{height:54px;border-radius:16px!important;font-size:16.5px!important;font-weight:700}
+.lbtn:disabled{opacity:1!important;background:color-mix(in srgb,var(--btn) 30%,var(--panel))!important;border-color:transparent!important;box-shadow:none}
+.lsmall{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-3);margin-top:16px;padding:0 4px}
+.lsmall b{color:var(--accent-ink);font-weight:650}
+.login #iosHint{margin-top:16px;text-align:center}
+@media (min-width:900px){
+  .login{grid-template-columns:minmax(420px,520px) 1fr}
+  .lg-side{display:flex;flex-direction:column;position:relative;overflow:hidden;background:linear-gradient(160deg,#2F3AC4,#4653E6 60%,#5A66F0);color:#fff;padding:52px 52px}
+  .lg-ring{position:absolute;right:-120px;bottom:-120px;width:380px;height:380px;border-radius:50%;border:60px solid rgba(255,255,255,.06)}
+  .lg-brand{display:flex;align-items:center;gap:14px;font-size:18px}
+  .lg-brand .app-logo{width:50px;height:50px;border-radius:15px;background:rgba(255,255,255,.16)!important;box-shadow:none}
+  .lg-brand b{display:block;font-size:19px}.lg-brand small{display:block;font-size:13px;opacity:.75}
+  .lg-side h2{font-size:36px;line-height:1.15;letter-spacing:-.03em;margin:auto 0 0;font-weight:780;max-width:420px}
+  .lg-side p{opacity:.82;font-size:16px;line-height:1.5;margin:14px 0 0;max-width:400px;color:#fff}
+  .lg-side ul{list-style:none;margin:32px 0 auto;padding:0;display:flex;flex-direction:column;gap:12px;font-size:15px}
+  .lg-side li{display:flex;gap:12px;align-items:center;opacity:.93}
+  .lg-side li i{width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700}
+  .lg-main{align-items:center}
+  .login form{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:34px;width:440px;box-shadow:0 20px 50px rgba(15,23,42,.08)}
+  .lg-hero{display:none}
+  .lg-head{display:block;margin-bottom:20px}
+  .lg-head h2{margin:0;font-size:24px;letter-spacing:-.02em}
+  .lg-head p{margin:5px 0 0;color:var(--ink-3);font-size:14px}
+}
 /* ================= UI v2: dasar ================= */
 body{letter-spacing:-.005em}
 .card,.kpi,.flow,.tbl-wrap,.mc{border-radius:18px;box-shadow:var(--shadow)}
@@ -1138,6 +1192,43 @@ body.ro .bnav{grid-template-columns:repeat(3,1fr)}
 html.is-dark .tg.upd{color:#67E8F9}
 body.ro [data-upd]{display:none!important}
 .dupd{padding:4px 16px}
+/* ================= UI v2: Pengguna ================= */
+dialog.usrdlg{width:min(720px,96vw)}
+.usrdlg .mb{padding:16px 22px 22px}
+.usr-add{background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:14px}
+.usr-add>b{display:block;font-size:14.5px;margin-bottom:10px}
+.usr-f{display:grid;grid-template-columns:1.1fr 1.4fr 110px auto;gap:8px}
+.usr-f input,.usr-f select{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:10px 12px;font-size:14.5px;color:var(--ink);min-width:0}
+.usr-add .hint{margin:8px 0 0}
+.usr-res{display:flex;align-items:center;gap:12px;background:var(--deal-soft);border:1px solid color-mix(in srgb,var(--deal) 30%,transparent);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.usr-res[hidden]{display:none}
+.usr-res>div{flex:1;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.usr-res code{font-size:20px;font-weight:800;letter-spacing:3px;color:var(--ok-ink);font-family:inherit}
+.usr-res small{color:var(--ink-2);font-size:12.5px}
+.usr-err{color:var(--bad-ink);font-size:13.5px;min-height:0;margin-bottom:8px}
+.usr-err:empty{display:none}
+.usr-h{font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 6px}
+.usr-list{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel)}
+.usr-list>.usr-h{padding:10px 14px 4px;margin:0}
+.usr-list>.hint{padding:14px}
+.usr-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.usr-row.off{opacity:.62}
+.usr-m{flex:1;min-width:0}
+.usr-m b{display:block;font-size:15px}.usr-m b small{font-weight:500;color:var(--ink-3)}
+.usr-m>small{display:block;color:var(--ink-3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.usr-a{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:400px}
+.usr-a .btn{padding:6px 10px}
+.btn.danger-fill{background:var(--lost);border-color:var(--lost);color:#fff}
+#usrDel select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:11px;padding:11px 12px;font-size:15px;color:var(--ink)}
+.ud-l{display:block;font-size:13px;font-weight:650;color:var(--ink-2);margin-bottom:6px}
+@media (max-width:767px){
+  .usr-f{grid-template-columns:1fr 1fr}
+  .usr-f input{grid-column:1/-1}
+  .usr-f input,.usr-f select{font-size:16px;min-height:44px}
+  .usr-row{flex-wrap:wrap}
+  .usr-a{max-width:none;width:100%;justify-content:flex-start;padding-left:50px}
+}
 /* ===/V2=== */
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -1145,7 +1236,7 @@ body.ro [data-upd]{display:none!important}
 <body>
 <div class="shell">
 <aside class="side" aria-label="Menu utama">
-  <div class="side-brand"><span class="side-logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
+  <div class="side-brand"><span class="side-logo app-logo" aria-hidden="true"><svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
   <button class="btn primary side-add" type="button" data-proxy="#addBtn">+ Tambah prospek</button>
   <nav class="side-nav">
     <div class="side-h">Menu</div>
@@ -1159,6 +1250,7 @@ body.ro [data-upd]{display:none!important}
   <div class="side-foot">
     <button type="button" class="snav sx" data-proxy="#installBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Install aplikasi</span></button>
     <button type="button" class="snav sx" data-proxy="#repBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15l3 3 3-3"/></svg><span>Download laporan</span></button>
+    <button type="button" class="snav sx" data-proxy="#usersBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6M19 8v6M22 11h-6"/></svg><span>Pengguna</span></button>
     <button type="button" class="snav sx" data-proxy="#setBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Pengaturan</span></button>
     <button type="button" class="snav sx themeBtn" aria-label="Ganti mode"><svg class="ic-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="ic-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="themeTxt">Mode malam</span></button>
     <button type="button" class="snav sx" data-proxy="#salesBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M7 16V10M12 16V5M17 16v-8"/></svg><span>Buka Sales Report</span></button>
@@ -1179,6 +1271,7 @@ body.ro [data-upd]{display:none!important}
       <button class="btn" id="installBtn" type="button" hidden>Install aplikasi</button>
       <button class="btn" id="repBtn" type="button">Download laporan</button>
       <button class="btn" id="setBtn" type="button">Pengaturan</button>
+      <button class="btn" id="usersBtn" type="button" style="display:none">Pengguna</button>
       <a class="btn" id="sheetBtn" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Buka Spreadsheet</a>
       <a class="btn" id="salesBtn" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;display:none">Buka Sales Report</a>
       <button class="btn primary" id="addBtn" type="button">+ Tambah prospek</button>
@@ -1290,6 +1383,30 @@ body.ro [data-upd]{display:none!important}
   <button type="button" data-view="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Ringkasan</span></button>
   <button type="button" class="nav-more" data-proxy="#menuBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg><span>Lainnya</span></button>
 </nav>
+<dialog id="usrDlg" class="paydlg usrdlg" aria-labelledby="usrTtl">
+  <div class="mh"><h2 id="usrTtl">Pengguna</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+  <div class="mb">
+    <form id="usrAdd" class="usr-add" novalidate>
+      <b>Tambah pengguna</b>
+      <div class="usr-f"><input id="uName" placeholder="Nama" autocomplete="off" maxlength="40" aria-label="Nama"><input id="uEmail" type="email" placeholder="Email (Gmail)" autocomplete="off" aria-label="Email"><select id="uRole" aria-label="Peran"><option value="pic">PIC</option><option value="atasan">Atasan</option><option value="admin">Admin</option></select><button class="btn primary" type="submit" id="uAddBtn">Tambah</button></div>
+      <p class="hint">PIN 6 angka dibuat otomatis dan dikirim ke email pengguna bersama link aplikasi.</p>
+    </form>
+    <div class="usr-res" id="usrRes" hidden></div>
+    <div class="usr-err" id="usrErr" role="alert"></div>
+    <div id="usrList" class="usr-list"><p class="hint">Memuat…</p></div>
+  </div>
+</dialog>
+<dialog id="usrDel" class="paydlg" aria-labelledby="udTtl">
+  <div class="mh"><h2 id="udTtl">Hapus pengguna</h2><button class="x" type="button" data-close aria-label="Tutup">×</button></div>
+  <div class="mb">
+    <p id="udTxt" style="margin:6px 0 14px;line-height:1.5"></p>
+    <label class="ud-l" for="udMove">Data klien yang dipegang</label>
+    <select id="udMove"></select>
+    <p class="hint" style="margin:8px 0 0">Data klien tidak ikut terhapus. Akun ini langsung tidak bisa login lagi.</p>
+    <div class="usr-err" id="udErr" role="alert"></div>
+  </div>
+  <div class="mf"><div style="display:flex;gap:8px;margin-left:auto"><button class="btn" type="button" data-close>Batal</button><button class="btn danger-fill" type="button" id="udGo">Hapus akun</button></div></div>
+</dialog>
 <dialog id="detDlg" class="sheet detdlg" aria-label="Detail klien"><div class="det-in" id="detBody"></div></dialog>
 <dialog id="perDlg" class="sheet perdlg" aria-labelledby="perTtl">
   <div class="sheet-in">
@@ -1326,6 +1443,7 @@ body.ro [data-upd]{display:none!important}
     <button type="button" class="sheet-item" data-proxy="#repBtn">Download laporan</button>
     <button type="button" class="sheet-item" data-proxy="#salesBtn">Buka Sales Report</button>
     <button type="button" class="sheet-item" data-proxy="#setBtn">Pengaturan</button>
+    <button type="button" class="sheet-item" data-proxy="#usersBtn">Pengguna</button>
     <button type="button" class="sheet-item" data-proxy="#sheetBtn">Buka Spreadsheet</button>
     <button type="button" class="sheet-item themeBtn"><span class="themeTxt">Mode malam</span></button>
     <button type="button" class="sheet-item" data-proxy="#installBtn">Install aplikasi</button>
@@ -1558,15 +1676,26 @@ body.ro [data-upd]{display:none!important}
   </form>
 </dialog>
 <div class="login" id="login" hidden>
+  <aside class="lg-side" aria-hidden="true"><i class="lg-ring"></i>
+    <div class="lg-brand"><span class="app-logo"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><div><b>Prospek</b><small>Monitoring &amp; pengerjaan</small></div></div>
+    <h2>Semua prospek, follow-up, dan pembayaran di satu tempat.</h2>
+    <p>Tugas hari ini, kirim WhatsApp beruntun, invoice, dan laporan, tersinkron dengan Google Sheets.</p>
+    <ul><li><i>✓</i>Tugas &amp; follow-up otomatis tiap hari</li><li><i>Rp</i>Invoice, DP &amp; pelunasan dalam 1 klik</li><li><i>↗</i>Laporan PIC &amp; sales report siap unduh</li></ul>
+  </aside>
+  <div class="lg-main">
   <form id="loginFrm" novalidate>
-    <h2>Masuk dashboard</h2>
-    <p>Pilih nama kamu lalu masukkan PIN. Setelah masuk, aplikasi tetap bisa dipakai tanpa internet.</p>
-    <label>Nama<select id="lName"></select><input id="lNameTxt" autocomplete="username" autocapitalize="words" placeholder="Ketik nama" hidden></label>
-    <label>PIN<input id="lPin" type="password" inputmode="numeric" autocomplete="current-password"></label>
-    <div class="e" id="loginErr" role="alert"></div>
-    <button class="btn primary" type="submit" id="lBtn">Masuk</button>
+    <div class="lg-hero"><span class="app-logo"><svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true"><rect x="14" y="34" width="9" height="16" rx="4.5" fill="#fff"/><rect x="27.5" y="25" width="9" height="25" rx="4.5" fill="#fff"/><rect x="41" y="14" width="9" height="36" rx="4.5" fill="#FFC53D"/></svg></span><h1>Monitoring Prospek</h1><p>Vorent · Izinin · Echoffice</p></div>
+    <div class="lg-head"><h2>Masuk</h2><p>Ketik nama dan PIN kamu.</p></div>
+    <label class="lf" for="lNameTxt">Nama</label>
+    <span class="lin"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><input id="lNameTxt" autocomplete="username" autocapitalize="words" spellcheck="false" placeholder="Nama kamu"></span>
+    <label class="lf" for="lPin">PIN</label>
+    <span class="pinbox" id="pinBox"><span class="pinv" id="pinV" aria-hidden="true"></span><input id="lPin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" maxlength="12" aria-label="PIN"></span>
+    <div class="lmsg" id="loginErr" role="alert"></div>
+    <button class="btn primary lbtn" type="submit" id="lBtn">Masuk</button>
+    <div class="lsmall"><span>Nama diingat di perangkat ini</span><span>Lupa PIN? <b>Hubungi admin</b></span></div>
     <p class="hint" id="iosHint" hidden>Di iPhone: ketuk tombol Bagikan di Safari lalu pilih <b>Tambahkan ke Layar Utama</b> supaya jadi aplikasi.</p>
   </form>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1715,6 +1844,7 @@ const UPD_DAYS=7;
 function updInfo(p){
   if(!p||phase(p)!=="proses")return null;
   const g=groupOf(p).filter(x=>phase(x)==="proses");if(!g.length)return null;
+  if(!paidGroups()[p.grup||p.id])return null;   // belum bayar = belum dikerjakan, masih follow-up
   const key=g.find(x=>x.id===(p.grup||p.id))||g[0];
   const ds=[];g.forEach(x=>[x.progUpd,x.tglDp,x.tglLunas].forEach(v=>{v=String(v||"").slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(v))ds.push(v)}));
   const last=ds.sort().pop()||String(key.created||"").slice(0,10);if(!last)return null;
@@ -1892,7 +2022,7 @@ function applyRole(){
   $("#boss").hidden=!isAtasan();
   if(isAtasan()){if(user.salesUrl){$("#bossSales").href=user.salesUrl;$("#bossSales").style.display=""}else $("#bossSales").style.display="none";
     if(["tugas","fu"].includes(document.body.dataset.view))setView("home")}
-  $("#setBtn").style.display=o?"":"none";
+  $("#setBtn").style.display=o?"":"none";$("#usersBtn").style.display=o?"":"none";
   $("#sheetBtn").style.display=o&&user.sheetUrl?"":"none";if(o&&user.sheetUrl)$("#sheetBtn").href=user.sheetUrl;
   $("#salesBtn").style.display=a&&user.salesUrl?"":"none";if(a&&user.salesUrl)$("#salesBtn").href=user.salesUrl;
   $("#pbPic").style.display=a?"":"none";if(!a)$("#fPic").value="";
@@ -1904,38 +2034,51 @@ function applyRole(){
   $("#h1").textContent=a?((window.matchMedia&&window.matchMedia("(max-width:767px)").matches)?(isAtasan()?"Dashboard Atasan":"Dashboard Admin"):"Monitoring Prospek & Pengerjaan"):"Dashboard "+user.name;
   setTopH();
 }
-const nameVal=()=>($("#lName").hidden?$("#lNameTxt").value:$("#lName").value).trim();
-function fillNames(sel){
-  const n=ls.get(K.names,[]),s=$("#lName"),t=$("#lNameTxt");
-  const keep=sel||nameVal();
-  if(n.length){
-    s.innerHTML=`<option value="">Pilih nama</option>`+n.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
-    const hit=n.find(x=>norm(x)===norm(keep));s.value=hit||"";
-    s.hidden=false;t.hidden=true;
-  }else{s.hidden=true;t.hidden=false;t.value=keep||""}
-}
+const nameVal=()=>$("#lNameTxt").value.trim().replace(/\s+/g," ");
+const LAST_NAME="pm_lastname";
+function fillNames(sel){const t=$("#lNameTxt");t.value=sel||ls.get(LAST_NAME,"")||t.value||""}
+// PIN tampil sebagai kotak titik (minimal 6 kotak)
+function pinPaint(){const v=$("#lPin").value,n=Math.max(6,v.length+(v.length>=6&&v.length<12?1:0)),f=document.activeElement===$("#lPin");
+  $("#pinV").innerHTML=Array.from({length:n},(_,i)=>`<i class="${i<v.length?"f":""}${f&&i===Math.min(v.length,n-1)?" cur":""}">${i<v.length?"•":""}</i>`).join("");
+  if(!loginLock)$("#lBtn").disabled=v.length<4||!nameVal()}
+let loginLock=0,loginLockT=null;
+function loginMsg(kind,html){const m=$("#loginErr");m.className="lmsg"+(kind?" "+kind:"");m.innerHTML=html||"";$("#pinBox").classList.toggle("err",kind==="e")}
+function lockLogin(min){loginLock=Date.now()+min*60000;$("#lBtn").disabled=true;clearTimeout(loginLockT);
+  const tick=()=>{const left=Math.ceil((loginLock-Date.now())/60000);if(left<=0){loginLock=0;loginMsg("","");pinPaint();return}
+    loginMsg("l",`<b>Terlalu banyak percobaan.</b> Nama ini dikunci sementara. Coba lagi dalam ${left} menit, atau hubungi admin.`);loginLockT=setTimeout(tick,20000)};tick()}
+$("#lPin").addEventListener("input",()=>{const v=$("#lPin").value.replace(/\D/g,"");if(v!==$("#lPin").value)$("#lPin").value=v;if($("#loginErr").classList.contains("e"))loginMsg("","");pinPaint()});
+["focus","blur"].forEach(ev=>$("#lPin").addEventListener(ev,pinPaint));
+$("#lNameTxt").addEventListener("input",()=>{if(loginLock){loginLock=0;clearTimeout(loginLockT);loginMsg("","")}pinPaint()});
+$("#pinBox").addEventListener("click",()=>$("#lPin").focus());
 function showLogin(msg,keep){
   token="";ls.del(K.tok);
   if(!keep){user=null;items=[];serverItems=[];queue=[];ls.del(K.data);ls.del(K.q);render()}
   document.querySelectorAll("dialog[open]").forEach(d=>d.close());
-  $("#loginErr").textContent=msg||"";$("#lPin").value="";$("#login").hidden=false;
-  fillNames(keep&&user?user.name:"");
-  if(navigator.onLine&&API)call("names").then(n=>{ls.set(K.names,n);fillNames()}).catch(()=>{});
-  if(!API)$("#loginErr").textContent="API_URL belum diisi di config.js.";
-  setTimeout(()=>(nameVal()?$("#lPin"):($("#lName").hidden?$("#lNameTxt"):$("#lName"))).focus(),0);
+  loginMsg(msg?"e":"",esc(msg||""));$("#pinBox").classList.remove("err");$("#lPin").value="";$("#login").hidden=false;
+  fillNames(keep&&user?user.name:"");pinPaint();
+  if(!API)loginMsg("e","API_URL belum diisi di config.js.");
+  setTimeout(()=>(nameVal()?$("#lPin"):$("#lNameTxt")).focus(),0);
 }
 $("#loginFrm").addEventListener("submit",async e=>{
   e.preventDefault();const n=nameVal(),pin=$("#lPin").value.trim();
-  if(!n||!pin){$("#loginErr").textContent="Pilih nama dan isi PIN.";return}
-  if(!navigator.onLine){$("#loginErr").textContent="Masuk pertama kali butuh koneksi internet.";return}
-  const b=$("#lBtn");b.disabled=true;b.textContent="Memeriksa…";$("#loginErr").textContent="";
+  if(loginLock>Date.now())return;
+  if(!n||!pin){loginMsg("e","Isi nama dan PIN dulu.");return}
+  if(!navigator.onLine){loginMsg("e","Masuk pertama kali butuh koneksi internet.");return}
+  const b=$("#lBtn");b.disabled=true;b.textContent="Memeriksa…";loginMsg("","");
   try{
     const d=await call("login",{name:n,pin});
     const owner=(ls.get(K.data,{})||{}).user;
     if(!owner||norm(owner.name)!==norm(d.user.name)){queue=[];ls.del(K.q)}
+    ls.set(LAST_NAME,d.user.name);
     token=d.token;ls.set(K.tok,token);loadData(d);$("#login").hidden=true;toast("Halo, "+d.user.name);sync();
-  }catch(err){$("#loginErr").textContent=err.code==="LOCK"?"Terlalu banyak percobaan salah. Coba lagi 15 menit lagi.":err.code==="BAD"?"Nama atau PIN salah.":err.code==="NOAPI"?"API_URL belum diisi di config.js.":"Tidak bisa terhubung ke server. Cek internet lalu coba lagi."}
-  finally{b.disabled=false;b.textContent="Masuk"}
+  }catch(err){const c=String(err.code||""),k=c.split(":")[0],x=+c.split(":")[1]||0;
+    $("#lPin").value="";
+    if(k==="LOCK")lockLogin(x||15);
+    else if(k==="BAD")loginMsg("e",`<b>Nama atau PIN salah.</b> `+(x?`Sisa ${x} percobaan lagi sebelum dikunci 15 menit.`:`Cek lagi nama dan PIN kamu.`));
+    else if(k==="INACTIVE")loginMsg("e",`<b>Akun ini sudah dinonaktifkan.</b> Hubungi admin.`);
+    else if(k==="NOAPI")loginMsg("e","API_URL belum diisi di config.js.");
+    else loginMsg("e","Tidak bisa terhubung ke server. Cek internet lalu coba lagi.");}
+  finally{b.textContent="Masuk";pinPaint();if(loginLock>Date.now())b.disabled=true;setTimeout(()=>$("#lPin").focus(),0)}
 });
 $("#logoutBtn").onclick=()=>{
   if(queue.length&&!confirm(`Masih ada ${queue.length} perubahan yang belum tersinkron. Kalau keluar sekarang, perubahan itu hilang. Tetap keluar?`))return;
@@ -3594,6 +3737,72 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-clr]");if(
 $("#detDlg").addEventListener("click",e=>{if(e.target===$("#detDlg"))$("#detDlg").close()});
 $("#detDlg").addEventListener("close",()=>{if(!detWide()){detId=null;document.querySelectorAll("#lvList .cr.sel").forEach(r=>r.classList.remove("sel"))}});
 window.addEventListener("resize",()=>{clearTimeout(window._dtT);window._dtT=setTimeout(()=>{try{if(detWide()&&$("#detDlg").open)$("#detDlg").close();paintDet()}catch(e){}},150)});
+
+// ---------- Pengguna (khusus admin) ----------
+var usrData=[];
+const ROLE_L={admin:"Admin",atasan:"Atasan",pic:"PIC"};
+async function usrLoad(){
+  $("#usrErr").textContent="";
+  if(!navigator.onLine){$("#usrList").innerHTML=`<p class="hint">Butuh internet untuk mengelola pengguna.</p>`;return}
+  try{usrData=await call("usersList");usrPaint()}
+  catch(e){$("#usrList").innerHTML="";$("#usrErr").textContent=e.code==="UNKNOWN"?"Code.gs terbaru belum di-deploy. Pasang Code.gs lalu Deploy → New version.":(e.message||"Gagal memuat pengguna.")}
+}
+function usrPaint(){
+  const me=norm(user&&user.name);
+  const rows=usrData.slice().sort((a,b)=>(b.active-a.active)||a.role.localeCompare(b.role)||a.name.localeCompare(b.name));
+  $("#usrList").innerHTML=`<div class="usr-h">${rows.length} pengguna</div>`+rows.map(u=>{const self=norm(u.name)===me;
+    const p={id:u.name,nama:u.name};
+    return `<div class="usr-row${u.active?"":" off"}"><span class="ini ${iniCls(p)}">${esc(initials(p))}</span>
+      <div class="usr-m"><b>${esc(u.name)}${self?` <small>(kamu)</small>`:""}</b><small>${esc(u.email||"email belum diisi")}</small>
+        <span class="usr-tags"><span class="tg ${u.role==="admin"?"fu":u.role==="atasan"?"dp":"mut"}">${ROLE_L[u.role]||u.role}</span>${u.active?"":`<span class="tg late">Nonaktif</span>`}${u.locked?`<span class="tg dp">Terkunci ${u.locked} mnt</span>`:""}${u.data?`<span class="tg mut">${u.data} data</span>`:""}</span></div>
+      <div class="usr-a">${u.locked?`<button type="button" class="btn sm" data-ua="unlock" data-n="${esc(u.name)}">Buka kunci</button>`:""}<button type="button" class="btn sm" data-ua="reset" data-n="${esc(u.name)}">Reset PIN</button>${self?"":`<button type="button" class="btn sm" data-ua="${u.active?"off":"on"}" data-n="${esc(u.name)}">${u.active?"Nonaktifkan":"Aktifkan"}</button><button type="button" class="btn sm danger" data-ua="del" data-n="${esc(u.name)}">Hapus</button>`}</div></div>`}).join("");
+}
+function usrShowPin(r,kind){
+  const el=$("#usrRes");el.hidden=false;
+  el.innerHTML=`<div><b>${kind==="new"?"Akun "+esc(r.name)+" dibuat":"PIN "+esc(r.name)+" sudah direset"}</b><span>PIN: <code>${esc(r.pin)}</code></span><small>${r.mailed?"Sudah dikirim ke email pengguna.":"Email tidak terkirim (email kosong atau gagal). Berikan PIN ini langsung ke pengguna."}</small></div><button type="button" class="btn sm" id="usrCopy">Salin</button>`;
+  $("#usrCopy").onclick=async()=>{try{await navigator.clipboard.writeText(`Login Monitoring Prospek\nNama: ${r.name}\nPIN: ${r.pin}\n${location.href.split("#")[0]}`);toast("Disalin")}catch(e){toast("Gagal menyalin")}};
+}
+$("#usersBtn").onclick=()=>{$("#usrRes").hidden=true;$("#usrErr").textContent="";$("#uName").value="";$("#uEmail").value="";$("#uRole").value="pic";$("#usrList").innerHTML=`<p class="hint">Memuat…</p>`;$("#usrDlg").showModal();usrLoad()};
+$("#usrAdd").addEventListener("submit",async e=>{
+  e.preventDefault();const name=$("#uName").value.trim().replace(/\s+/g," "),email=$("#uEmail").value.trim(),role=$("#uRole").value;
+  $("#usrErr").textContent="";
+  if(!name){$("#usrErr").textContent="Isi nama dulu.";$("#uName").focus();return}
+  if(email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){$("#usrErr").textContent="Format email belum benar.";$("#uEmail").focus();return}
+  if(usrData.some(u=>norm(u.name)===norm(name))){$("#usrErr").textContent=`Nama ${name} sudah dipakai.`;return}
+  const b=$("#uAddBtn");b.disabled=true;b.textContent="Menyimpan…";
+  try{const r=await call("userAdd",{user:{name,email,role}});usrShowPin(r,"new");$("#uName").value="";$("#uEmail").value="";
+    if(role==="pic"&&!settings.pics.some(x=>norm(x)===norm(r.name))){settings.pics.push(r.name);applySettings();saveLocal()}
+    await usrLoad()}
+  catch(err){$("#usrErr").textContent=err.message||"Gagal menambah pengguna."}
+  finally{b.disabled=false;b.textContent="Tambah"}
+});
+let udName="";
+$("#usrList").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-ua]");if(!b)return;const a=b.dataset.ua,n=b.dataset.n;$("#usrErr").textContent="";
+  if(a==="del"){udName=n;const u=usrData.find(x=>x.name===n)||{};
+    $("#udTxt").innerHTML=`Akun <b>${esc(n)}</b> akan dihapus permanen${u.data?` (memegang <b>${u.data} data</b> klien)`:""}.`;
+    $("#udMove").innerHTML=usrData.filter(x=>x.active&&x.name!==n&&x.role!=="atasan").map(x=>`<option value="${esc(x.name)}">Pindahkan ke ${esc(x.name)}</option>`).join("")+`<option value="">Biarkan tetap atas nama ${esc(n)}</option>`;
+    if(!u.data)$("#udMove").value="";
+    $("#udErr").textContent="";$("#usrDel").showModal();return}
+  if(a==="reset"&&!confirm(`Buat PIN baru untuk ${n}? PIN lama langsung tidak berlaku.`))return;
+  if(a==="off"&&!confirm(`Nonaktifkan ${n}? Dia langsung keluar dan tidak bisa login sampai diaktifkan lagi.`))return;
+  b.disabled=true;
+  try{
+    if(a==="reset"){const r=await call("userResetPin",{name:n});usrShowPin(r,"reset")}
+    else if(a==="unlock"){await call("userUnlock",{name:n});toast(`${n} sudah bisa login lagi`)}
+    else if(a==="off"||a==="on"){await call("userSetActive",{name:n,active:a==="on"});toast(a==="on"?`${n} aktif lagi`:`${n} dinonaktifkan`)}
+    await usrLoad();
+  }catch(err){$("#usrErr").textContent=err.message||"Gagal.";b.disabled=false}
+});
+$("#udGo").onclick=async()=>{
+  const b=$("#udGo"),mv=$("#udMove").value;b.disabled=true;b.textContent="Menghapus…";$("#udErr").textContent="";
+  try{const r=await call("userDelete",{name:udName,moveTo:mv});
+    settings.pics=settings.pics.filter(x=>norm(x)!==norm(udName));applySettings();saveLocal();
+    $("#usrDel").close();toast(`Akun ${udName} dihapus`+(r.moved?` · ${r.moved} data dipindah ke ${mv}`:""));
+    await usrLoad();try{sync()}catch(e){}}
+  catch(err){$("#udErr").textContent=err.message||"Gagal menghapus."}
+  finally{b.disabled=false;b.textContent="Hapus akun"}
+};
 // ---------- Hari ini ----------
 var tgChip="all";
 const WA_SVG='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.6-.2 1.2z"/></svg>';

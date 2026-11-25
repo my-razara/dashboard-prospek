@@ -130,7 +130,7 @@ function fixLunas_() {
 function route_(q) {
   if (q.action !== 'version' && q.action !== 'logout') ensureLayout_();
   switch (q.action) {
-    case 'names': { const ss = ss_(); ensure_(ss); return readUsers_(ss).filter(u => u.pin).map(u => u.name); }
+    case 'names': return [];   // daftar nama tidak lagi dibuka ke publik (login ketik nama manual)
     case 'login': ensure_(ss_()); return login(q.name, q.pin);
     case 'logout': return logout(q.token);
     case 'version': return getVersion();
@@ -140,6 +140,12 @@ function route_(q) {
     case 'checkWa': return checkWa(q.token, q.wa, q.id, q.grup);
     case 'adsStats': return adsStats(q.token);
     case 'adsSync': return adsSync(q.token);
+    case 'usersList': return usersList(q.token);
+    case 'userAdd': return userAdd(q.token, q.user);
+    case 'userResetPin': return userResetPin(q.token, q.name);
+    case 'userUnlock': return userUnlock(q.token, q.name);
+    case 'userSetActive': return userSetActive(q.token, q.name, q.active);
+    case 'userDelete': return userDelete(q.token, q.name, q.moveTo);
   }
   throw new Error('UNKNOWN');
 }
@@ -150,14 +156,26 @@ function getVersion() {
   return PropertiesService.getScriptProperties().getProperty('VER') || '0';
 }
 
+const LOGIN_MAX = 3, LOGIN_LOCK_MIN = 15;
+// salah PIN 3x -> nama itu dikunci 15 menit (di semua perangkat). Pesan error: BAD:<sisa> / LOCK:<menit>
 function login(name, pin) {
   const cache = CacheService.getScriptCache();
-  const fk = 'F_' + norm_(name);
-  const fails = Number(cache.get(fk) || 0);
-  if (fails >= 5) throw new Error('LOCK');
+  const key = norm_(name), fk = 'F_' + key, lk = 'L_' + key;
+  const until = Number(cache.get(lk) || 0);
+  if (until > Date.now()) throw new Error('LOCK:' + Math.max(1, Math.ceil((until - Date.now()) / 60000)));
+  if (!key) throw new Error('BAD:' + LOGIN_MAX);
   const ss = ss_();
-  const u = readUsers_(ss).find(x => norm_(x.name) === norm_(name) && x.pin && x.pin === String(pin || '').trim());
-  if (!u) { cache.put(fk, String(fails + 1), 900); throw new Error('BAD'); }
+  const u = readUsers_(ss).find(x => norm_(x.name) === key && x.pin && x.pin === String(pin || '').trim());
+  if (!u || !u.active) {
+    const fails = Number(cache.get(fk) || 0) + 1;
+    if (fails >= LOGIN_MAX) {
+      cache.put(lk, String(Date.now() + LOGIN_LOCK_MIN * 60000), LOGIN_LOCK_MIN * 60);
+      cache.remove(fk);
+      throw new Error('LOCK:' + LOGIN_LOCK_MIN);
+    }
+    cache.put(fk, String(fails), LOGIN_LOCK_MIN * 60);
+    throw new Error(u && !u.active ? 'INACTIVE' : 'BAD:' + (LOGIN_MAX - fails));
+  }
   cache.remove(fk);
   const token = Utilities.getUuid();
   const props = PropertiesService.getScriptProperties();
@@ -347,7 +365,7 @@ function auth_(token) {
   const t = JSON.parse(raw);
   if (t.e < Date.now()) { props.deleteProperty('T_' + token); throw new Error('AUTH'); }
   // pastikan user masih terdaftar & perannya terbaru (bisa dicabut dari sheet Pengguna)
-  const u = readUsers_(ss_()).find(x => norm_(x.name) === norm_(t.n) && x.pin);
+  const u = readUsers_(ss_()).find(x => norm_(x.name) === norm_(t.n) && x.pin && x.active);
   if (!u) { props.deleteProperty('T_' + token); throw new Error('AUTH'); }
   return u;
 }
@@ -448,12 +466,17 @@ function nextInvNo_(sh, o, brands, tz) {
 function readUsers_(ss) {
   const sh = ss.getSheetByName(SHEET_USER);
   if (!sh || sh.getLastRow() < 2) return [];
-  return sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues()
-    .filter(r => String(r[0]).trim())
-    .map(r => ({
-      name: String(r[0]).trim(),
-      pin: String(r[1]).trim(),
-      role: norm_(r[2]) === 'admin' ? 'admin' : (norm_(r[2]) === 'atasan' ? 'atasan' : 'pic')
+  const nc = Math.max(3, Math.min(5, sh.getLastColumn()));
+  return sh.getRange(2, 1, sh.getLastRow() - 1, nc).getValues()
+    .map((r, i) => ({ r: r, row: i + 2 }))
+    .filter(x => String(x.r[0]).trim())
+    .map(x => ({
+      name: String(x.r[0]).trim(),
+      pin: String(x.r[1]).trim(),
+      role: norm_(x.r[2]) === 'admin' ? 'admin' : (norm_(x.r[2]) === 'atasan' ? 'atasan' : 'pic'),
+      email: String(x.r[3] == null ? '' : x.r[3]).trim(),
+      active: norm_(x.r[4]) !== 'nonaktif',
+      row: x.row
     }));
 }
 
@@ -1144,7 +1167,7 @@ function remTasks_(items, pic, today) {
   // update progres ke klien: tiap 7 hari selama pengerjaan (1 per grup)
   const lastOf = a => a.map(x => [x.progUpd, x.tglDp, x.tglLunas].map(v => adsIso_(v, 'Asia/Jakarta')).filter(Boolean)).reduce((m, l) => m.concat(l), []).sort().pop() || '';
   const grp = {};
-  mine.filter(p => remPhase_(p) === 'proses').forEach(p => { (grp[p.grup || p.id] = grp[p.grup || p.id] || []).push(p); });
+  mine.filter(p => remPhase_(p) === 'proses' && paidG[p.grup || p.id]).forEach(p => { (grp[p.grup || p.id] = grp[p.grup || p.id] || []).push(p); });
   const upd = Object.keys(grp).map(k => { const a = grp[k], last = lastOf(a) || String(a[0].created || '').slice(0, 10); return { p: a.find(x => x.id === k) || a[0], last: last, next: remAddDays_(last, REM_UPD_DAYS) }; })
     .filter(x => x.last && x.next <= today && !due.some(d => (d.grup || d.id) === (x.p.grup || x.p.id))).sort((a, b) => a.next.localeCompare(b.next));
   return { inbox: inbox, fu: fu, dp: dp, due: due, lq: lq, upd: upd };
@@ -1197,7 +1220,7 @@ function remHtml_(pic, t, today) {
 function kirimPengingatPagi() {
   const ss = ss_(), tz = ss.getSpreadsheetTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const items = readAll_(ss), emails = remEmails_(ss), out = [];
-  readUsers_(ss).filter(u => u.role === 'pic').forEach(u => {
+  readUsers_(ss).filter(u => u.role === 'pic' && u.active).forEach(u => {
     const to = emails[norm_(u.name)];
     if (!to) { out.push(u.name + ': email belum diisi'); return; }
     const t = remTasks_(items, u.name, today);
@@ -1366,4 +1389,155 @@ function setupAtasan() {
   if (String(sh.getRange(1, 3).getValue()).indexOf('atasan') < 0) sh.getRange(1, 3).setValue('Peran (admin / atasan / pic)');
   Logger.log(NAME + ' sekarang peran atasan. PIN login: ' + pin);
   Logger.log('Sales report: ' + salesSync_(ss) + ' baris ditulis ke sheet ' + SALES.sheet + ' → ' + salesUrl_());
+}
+
+/* ---------------- Kelola pengguna (khusus admin, dari Pengaturan → Pengguna) ---------------- */
+const USER_HEAD = ['Nama', 'PIN', 'Peran (admin / atasan / pic)', 'Email', 'Status'];
+
+function adminOnly_(token) {
+  const u = auth_(token);
+  if (u.role !== 'admin') throw new Error('FORBIDDEN');
+  return u;
+}
+
+function userSheet_(ss) {
+  const sh = ss.getSheetByName(SHEET_USER);
+  const h = sh.getRange(1, 1, 1, USER_HEAD.length).getValues()[0];
+  USER_HEAD.forEach((t, i) => { if (!String(h[i] || '').trim()) sh.getRange(1, i + 1).setValue(t).setFontWeight('bold'); });
+  return sh;
+}
+
+function newPin_(users) {
+  const used = {};
+  users.forEach(u => used[u.pin] = 1);
+  let p;
+  do { p = String(Math.floor(100000 + Math.random() * 900000)); } while (used[p]);
+  return p;
+}
+
+function userFind_(ss, name) {
+  const u = readUsers_(ss).find(x => norm_(x.name) === norm_(name));
+  if (!u) throw new Error('Pengguna tidak ditemukan');
+  return u;
+}
+
+function userMail_(u, pin, kind) {
+  if (!/@/.test(u.email || '')) return false;
+  const role = u.role === 'admin' ? 'Admin' : u.role === 'atasan' ? 'Atasan' : 'PIC';
+  const head = kind === 'reset' ? 'PIN kamu sudah direset' : 'Akun kamu sudah dibuat';
+  const html = '<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f5f8;padding:24px">'
+    + '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e7eaf0">'
+    + '<div style="background:#3B47D9;color:#fff;padding:22px 24px"><div style="font-size:13px;opacity:.85">Monitoring Prospek</div><div style="font-size:20px;font-weight:800;margin-top:4px">' + head + '</div></div>'
+    + '<div style="padding:22px 24px;color:#0e1525;font-size:15px;line-height:1.55">Halo ' + u.name + ', berikut data login kamu' + (kind === 'reset' ? ' yang baru' : '') + ':'
+    + '<table style="margin:14px 0;border-collapse:collapse;font-size:15px"><tr><td style="padding:6px 18px 6px 0;color:#8a93a6">Nama</td><td style="padding:6px 0;font-weight:700">' + u.name + '</td></tr>'
+    + '<tr><td style="padding:6px 18px 6px 0;color:#8a93a6">PIN</td><td style="padding:6px 0;font-weight:800;font-size:22px;letter-spacing:4px">' + pin + '</td></tr>'
+    + '<tr><td style="padding:6px 18px 6px 0;color:#8a93a6">Peran</td><td style="padding:6px 0">' + role + '</td></tr></table>'
+    + '<a href="' + REM_APP_URL + '" style="display:inline-block;background:#3B47D9;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px">Buka aplikasi</a>'
+    + '<p style="color:#8a93a6;font-size:13px;margin-top:18px">Jangan bagikan PIN ini ke siapa pun. Setelah 3 kali salah PIN, akun dikunci 15 menit.</p></div></div></div>';
+  try {
+    MailApp.sendEmail({ to: u.email, subject: (kind === 'reset' ? 'PIN baru' : 'Akun baru') + ' Monitoring Prospek: ' + u.name, htmlBody: html, name: 'Monitoring Prospek' });
+    return true;
+  } catch (e) { return false; }
+}
+
+function usersList(token) {
+  adminOnly_(token);
+  const cache = CacheService.getScriptCache(), ss = ss_(), now = Date.now();
+  const items = readAll_(ss), cnt = {};
+  items.forEach(o => { const k = norm_(o.pic); if (k) cnt[k] = (cnt[k] || 0) + 1; });
+  return readUsers_(ss).map(u => {
+    const until = Number(cache.get('L_' + norm_(u.name)) || 0);
+    return { name: u.name, role: u.role, email: u.email, active: u.active, hasPin: !!u.pin, data: cnt[norm_(u.name)] || 0,
+      locked: until > now ? Math.ceil((until - now) / 60000) : 0 };
+  });
+}
+
+function userAdd(token, d) {
+  adminOnly_(token);
+  d = d || {};
+  const name = String(d.name || '').trim().replace(/\s+/g, ' '), email = String(d.email || '').trim();
+  const role = ['admin', 'atasan', 'pic'].indexOf(d.role) >= 0 ? d.role : 'pic';
+  if (!name) throw new Error('Nama wajib diisi');
+  if (name.length > 40 || /[<>=]/.test(name)) throw new Error('Nama tidak valid');
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Format email tidak valid');
+  const lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    const ss = ss_(), users = readUsers_(ss);
+    if (users.some(u => norm_(u.name) === norm_(name))) throw new Error('Nama ' + name + ' sudah dipakai');
+    const sh = userSheet_(ss), pin = newPin_(users), r = Math.max(sh.getLastRow() + 1, 2);
+    sh.getRange(r, 1, 1, 5).setNumberFormat('@').setValues([[name, pin, role, email, 'aktif']]);
+    if (role === 'pic') {
+      const st = readSettings_(ss);
+      if (!st.pics.some(x => norm_(x) === norm_(name))) { st.pics.push(name); writeSettings_(ss.getSheetByName(SHEET_SET), st); }
+    }
+    const mailed = userMail_({ name: name, email: email, role: role }, pin, 'new');
+    const v = bump_();
+    return { name: name, pin: pin, mailed: mailed, ver: v.ver };
+  } finally { lock.releaseLock(); }
+}
+
+function userResetPin(token, name) {
+  adminOnly_(token);
+  const lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    const ss = ss_(), users = readUsers_(ss), u = userFind_(ss, name), pin = newPin_(users);
+    userSheet_(ss).getRange(u.row, 2).setNumberFormat('@').setValue(pin);
+    const c = CacheService.getScriptCache(); c.remove('L_' + norm_(u.name)); c.remove('F_' + norm_(u.name));
+    logoutAll_(u.name);
+    return { name: u.name, pin: pin, mailed: userMail_(u, pin, 'reset') };
+  } finally { lock.releaseLock(); }
+}
+
+function userUnlock(token, name) {
+  adminOnly_(token);
+  const u = userFind_(ss_(), name), c = CacheService.getScriptCache();
+  c.remove('L_' + norm_(u.name)); c.remove('F_' + norm_(u.name));
+  return true;
+}
+
+function userSetActive(token, name, active) {
+  const me = adminOnly_(token);
+  const ss = ss_(), u = userFind_(ss, name);
+  if (norm_(u.name) === norm_(me.name)) throw new Error('Tidak bisa menonaktifkan akun sendiri');
+  if (!active && u.role === 'admin' && readUsers_(ss).filter(x => x.role === 'admin' && x.active).length <= 1) throw new Error('Minimal harus ada 1 admin aktif');
+  userSheet_(ss).getRange(u.row, 5).setValue(active ? 'aktif' : 'nonaktif');
+  if (!active) logoutAll_(u.name);
+  return true;
+}
+
+// hapus akun; data klien dipindah ke PIC lain (moveTo) atau tetap atas nama lama
+function userDelete(token, name, moveTo) {
+  const me = adminOnly_(token);
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const ss = ss_(), users = readUsers_(ss), u = userFind_(ss, name);
+    if (norm_(u.name) === norm_(me.name)) throw new Error('Tidak bisa menghapus akun sendiri');
+    if (u.role === 'admin' && users.filter(x => x.role === 'admin').length <= 1) throw new Error('Admin terakhir tidak bisa dihapus');
+    let moved = 0;
+    if (moveTo) {
+      const t = users.find(x => norm_(x.name) === norm_(moveTo) && x.active);
+      if (!t || norm_(t.name) === norm_(u.name)) throw new Error('PIC tujuan tidak valid');
+      const sh = ss.getSheetByName(SHEET_DATA), last = sh.getLastRow();
+      if (last >= 2) {
+        const rg = sh.getRange(2, PIC_COL, last - 1, 1), v = rg.getValues();
+        v.forEach(r => { if (norm_(r[0]) === norm_(u.name)) { r[0] = t.name; moved++; } });
+        if (moved) rg.setValues(v);
+      }
+    }
+    userSheet_(ss).deleteRow(u.row);
+    const st = readSettings_(ss);
+    if (st.pics.some(x => norm_(x) === norm_(u.name))) { st.pics = st.pics.filter(x => norm_(x) !== norm_(u.name)); writeSettings_(ss.getSheetByName(SHEET_SET), st); }
+    logoutAll_(u.name);
+    const v = bump_();
+    if (moved) salesSafe_(ss);
+    return { moved: moved, ver: v.ver };
+  } finally { lock.releaseLock(); }
+}
+
+function logoutAll_(name) {
+  const props = PropertiesService.getScriptProperties(), all = props.getProperties();
+  Object.keys(all).forEach(k => {
+    if (k.indexOf('T_') !== 0) return;
+    try { if (norm_(JSON.parse(all[k]).n) === norm_(name)) props.deleteProperty(k); } catch (e) {}
+  });
 }
