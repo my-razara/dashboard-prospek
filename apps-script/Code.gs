@@ -99,10 +99,10 @@ function ensureLayout_() {
     props.setProperty('LAYOUT_SIG', LAYOUT_SIG);
   }
   if (!props.getProperty('LUNAS_FIX_1')) { fixLunas_(); props.setProperty('LUNAS_FIX_1', new Date().toISOString()); }
-  if (!props.getProperty('DP_TTD_FIX_1')) { const n = fixDpTtd_(); props.setProperty('DP_TTD_FIX_1', new Date().toISOString() + ' ' + n + ' data'); }
+  if (!props.getProperty('DP_TTD_FIX_2')) { const n = fixDpTtd_(); props.setProperty('DP_TTD_FIX_2', new Date().toISOString() + ' ' + n + ' data'); }
 }
 
-// sekali saja: pendirian PT/CV yang sudah bayar DP tapi tahapnya masih Waiting DP -> TTD Draft Akta
+// sekali saja: pendirian/perubahan badan usaha yang sudah bayar DP tapi tahapnya masih Waiting DP -> TTD Draft Akta
 function fixDpTtd_() {
   const ss = ss_(), sh = ss.getSheetByName(SHEET_DATA), last = sh.getLastRow();
   if (last < 2) return 0;
@@ -116,7 +116,7 @@ function fixDpTtd_() {
     const st = String(r[si] || '').split(',').map(x => x.trim()).filter(Boolean);
     const paid = (Number(r[di]) || 0) > 0 || !!r[ti] || (Number(r[lu]) || 0) > 0;
     const later = PROC.slice(1).some(x => st.indexOf(x) >= 0), dead = ['Lose', 'Spam', 'Delete'].some(x => st.indexOf(x) >= 0);
-    if (r[ID_COL - 1] && paid && !later && !dead && /^Pendirian/i.test(String(r[li] || ''))) {
+    if (r[ID_COL - 1] && paid && !later && !dead && /^(Pendirian|Perubahan)/i.test(String(r[li] || ''))) {
       ['Waiting DP', 'TTD Draft Akta'].forEach(x => { if (st.indexOf(x) < 0) st.push(x); });
       r[si] = st.join(', ');
       if (!r[tt]) r[tt] = r[ti] instanceof Date ? Utilities.formatDate(r[ti], tz, 'yyyy-MM-dd') : String(r[ti] || '').slice(0, 10);

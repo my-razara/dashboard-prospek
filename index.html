@@ -1841,7 +1841,7 @@ let paidCache={ref:null,len:-1,map:null};
 function paidGroups(){if(paidCache.ref!==items||paidCache.len!==items.length){const m={};items.forEach(x=>{if(hasDp(x)||N(x.lunas)>0)m[x.grup||x.id]=1});paidCache={ref:items,len:items.length,map:m}}return paidCache.map}
 // ---------- tahap per paket & cek progres harian ----------
 const PKP_PK=["PIP","PTL","CIP","CVL"],NOREK_PK=["PTO","CTO"],MACET_DAYS=7;
-const isPendirian=p=>/^Pendirian/i.test(p.layanan||"");
+const isPendirian=p=>/^(Pendirian|Perubahan)/i.test(p.layanan||"");   // pendirian & perubahan badan usaha: alur tahap lengkap
 // tahap yang berlaku untuk data ini (paket tanpa PKP / tanpa rekening bank melewati tahap itu)
 function stagesFor(p){
   if(!p.layanan)return PROC.slice();
